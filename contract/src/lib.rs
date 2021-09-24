@@ -1,6 +1,6 @@
 /*
 Functions:
-    * deposit: deposit (send) NEAR to the contract
+    * deposit: deposit NEAR to the contract
     * get_status: get the sale status =>
         * total deposit
         * current price
@@ -9,7 +9,7 @@ Functions:
     * redeem: get the tokens from contract to wallet
  */
 
-// extern crate near_sdk;
+
 extern crate chrono;
 // To conserve gas, efficient serialization is achieved through Borsh (http://borsh.io/)
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -24,6 +24,7 @@ use chrono::prelude::{Utc, DateTime};
 
 near_sdk::setup_alloc!();
 
+// Sample parameters
 const TOTAL_NUMBER_OF_TOKENS_FOR_SALE: Balance = 100_000_000;
 const TOKEN_SALE_START_TIME_ISO8601: &str = "2021-09-15T12:00:09Z";
 const SALE_DURATION: Duration = 24 * 60 * 60 * 1_000_000_000;
@@ -41,11 +42,13 @@ pub struct TokenSale {
     sale_duration: Duration,
     grace_duration: Duration,
     is_finished: bool,
+    redeem_map: UnorderedMap<AccountId, Balance>,
 }
 
 #[ext_contract(ext_self)]
 pub trait ExtTokenSale {
     fn on_withdrawal_finished(&mut self, predecessor_account_id: AccountId, amount_to_withdraw: Balance) -> bool;
+    fn on_redeem_finished(&mut self, predecessor_account_id: AccountId, amount_to_redeem: Balance) -> bool;
 }
 
 impl Default for TokenSale {
@@ -58,6 +61,7 @@ impl Default for TokenSale {
             sale_duration: SALE_DURATION,
             grace_duration: GRACE_DURATION,
             is_finished: false,
+            redeem_map: UnorderedMap::new(b"c".to_vec()),
         }
     }
 }
@@ -85,7 +89,7 @@ impl TokenSale {
         let mut s = Self {
             ft_contract_name: ft_contract_name,
             num_of_tokens: num_of_tokens.into(),
-            deposit_map: UnorderedMap::new(b"a".to_vec()),
+            deposit_map: UnorderedMap::new(b"ax".to_vec()),
             start_time: {
                 start_time_iso8601
                 .parse::<DateTime<Utc>>()
@@ -94,6 +98,8 @@ impl TokenSale {
             sale_duration: sale_duration_in_min.into(),
             grace_duration: grace_duration_in_min.into(),
             is_finished: false,
+            redeem_map: UnorderedMap::new(b"cx".to_vec()),
+            
         };
         s.sale_duration *=  60 * 1_000_000_000;
         s.grace_duration *=  60 * 1_000_000_000;
@@ -108,6 +114,7 @@ impl TokenSale {
         sale_duration_in_min: WrappedDuration,
         grace_duration_in_min: WrappedDuration,
         reset_deposit: bool,
+        reset_redeem: bool,
     ) {
         assert!(env::state_exists(), "The contract is not initialized");
 
@@ -122,10 +129,10 @@ impl TokenSale {
         self.grace_duration = {let d: Duration = grace_duration_in_min.into(); d * 60 * 1_000_000_000};
         self.is_finished = false;
         if reset_deposit {
-            self.deposit_map = UnorderedMap::new(
-                format!("{}_{}", self.ft_contract_name, self.start_time)
-                .as_bytes().to_vec()
-            );
+            self.deposit_map.clear();
+        };
+        if reset_redeem {
+            self.redeem_map.clear();
         };
     }
 
@@ -216,7 +223,6 @@ impl TokenSale {
         } else {
             total_deposit = deposit_list.iter().sum();
         }
-        env::log(format!("total_deposit: {}", total_deposit).as_bytes());
         return (total_deposit as f64) / (BALANCE_BASE_UNIT as f64);
     }
 
@@ -225,23 +231,34 @@ impl TokenSale {
         env::log(format!("num_of_tokens:\t{}", self.num_of_tokens).as_bytes());
         env::log(format!("total_deposit:\t{}", self.get_total_deposit()).as_bytes());
         env::log(format!("current_price:\t{}", self.get_total_deposit() / (self.num_of_tokens as f64)).as_bytes());
-        // env::log(format!("start_time:\t{}", self.start_time));
-        // env::log(format!("sale_duration:\t{}", self.sale_duration));
-        // env::log(format!("grace_duration:\t{}", self.grace_duration));
         let current_ts = env::block_timestamp();
         if current_ts < self.start_time {
-            env::log(format!("Period: NOT STARTED").as_bytes());
+            env::log(format!("period: NOT STARTED").as_bytes());
         } else if current_ts <= self.start_time + self.sale_duration {
-            env::log(format!("Period: ON SALE").as_bytes());
+            env::log(format!("period: ON SALE").as_bytes());
         } else if current_ts <= self.start_time + self.sale_duration + self.grace_duration {
-            env::log(format!("Period: ON GRACE").as_bytes());
+            env::log(format!("period: ON GRACE").as_bytes());
         } else {
-            env::log(format!("Period: FINISHED").as_bytes());
+            env::log(format!("period: FINISHED").as_bytes());
             if !self.is_finished {
                 self.finish(Some(false));
             }
         }
         env::log(format!("is_finished:\t{}", self.is_finished).as_bytes());
+    }
+
+    pub fn get_redeemable_tokens(&self, account_id: Option<AccountId>) -> Balance {
+        let total_deposit = self.get_total_deposit();
+        if total_deposit.abs() < 1e-6 {
+            return 0;
+        }
+        let current_price = (total_deposit as f64) / (self.num_of_tokens as f64);
+        let redeemable_num = (
+            self.deposit_map.get(
+                &(account_id.unwrap_or(env::signer_account_id()))
+            ).unwrap_or(0) as f64 / (BALANCE_BASE_UNIT as f64) / current_price
+        ) as Balance;
+        return redeemable_num;
     }
 
     pub fn finish(&mut self, force: Option<bool>) {
@@ -266,70 +283,68 @@ impl TokenSale {
             env::log(format!(
                 "Account {} received {} tokens", account_id, redeemable_tokens,
             ).as_bytes());
-
-            // env::promise_create(
-            //     self.ft_contract_name.clone(), 
-            //     b"storage_deposit",
-            //     b"",
-            //     1250000000000000000000, 1,
-            // ).promise_then(env::promise_create(
-            //     self.ft_contract_name.clone(), 
-            //     b"ft_transfer",
-            //     json!({
-            //         "receiver_id": account_id,
-            //         "amount": redeemable_tokens,
-            //     }).to_string().as_bytes(),
-            //     0, 1,
-            // ));
-
-            env::promise_then(
-                env::promise_create(
-                    self.ft_contract_name.clone(), 
-                    b"storage_deposit",
-                    b"{}",
-                    1250000000000000000000, 20_000_000_000_000,
-                ),
-                self.ft_contract_name.clone(), 
-                b"ft_transfer",
-                json!({
-                    "receiver_id": account_id,
-                    "amount": WrappedBalance::from(redeemable_tokens),
-                }).to_string().as_bytes(),
-                1, 20_000_000_000_000,
-            );
         }
         self.is_finished = true;
     }
 
-    pub fn check_balance(&mut self, account_id: AccountId) {
-        // env::promise_create(account_id: AccountId, method_name: &[u8], arguments: &[u8], amount: Balance, gas: Gas)
-        // env::promise_return(promise_idx: PromiseIndex)
-        // let promise0 = env::promise_create(
-        //     self.ft_contract_name.clone(), 
-        //     b"ft_balance_of",
-        //     json!({"account_id": account_id}).to_string().as_bytes(),
-        //     0, 20_000_000_000_000,
-        // );
-        // env::promise_return(promise0);
-        
-        // let promise1 = env::promise_create(
-        //     self.ft_contract_name.clone(), 
-        //     b"storage_deposit",
-        //     b"{}",
-        //     1250000000000000000000, 20_000_000_000_000,
-        // );
-        // env::promise_return(promise1);
+    pub fn redeem(&mut self, request_num: WrappedBalance) -> Promise {
+        let account_id = env::signer_account_id();
+        let current_value = self.redeem_map.get(&account_id).unwrap_or(0);
+        let total_redeemable = self.get_redeemable_tokens(Some(env::signer_account_id()));
+        let amount_to_redeem: Balance = request_num.into();
+        assert!(
+            amount_to_redeem > 0 && amount_to_redeem <= total_redeemable - current_value,
+            "The number of tokens to claim is invalid"
+        );
 
-        let promise2 = env::promise_create(
-            self.ft_contract_name.clone(), 
-            b"ft_transfer",
+        let payout_promise = Promise::new(self.ft_contract_name.clone()).function_call(
+            b"ft_transfer".to_vec(), 
             json!({
                 "receiver_id": account_id,
-                "amount": WrappedBalance::from(10_00000000),
-            }).to_string().as_bytes(),
+                "amount": WrappedBalance::from(amount_to_redeem),
+            }).to_string().as_bytes().to_vec(), 
             1, 20_000_000_000_000,
         );
-        env::promise_return(promise2);
+
+        return payout_promise.then(
+            ext_self::on_redeem_finished(
+                account_id, amount_to_redeem,
+                &env::current_account_id(),
+                0, 20_000_000_000_000,
+            )
+        );
+    }
+
+    pub fn on_redeem_finished(&mut self, predecessor_account_id: AccountId, amount_to_redeem: Balance) -> bool {
+        env::log(b"Calling on_redeem_finished now");
+        assert!(
+            env::predecessor_account_id() == env::current_account_id(),
+            "Callback is not called from the contract itself",
+        );
+        assert!(
+            env::promise_results_count() == 1,
+            "Function called not as a callback",
+        );
+
+        match env::promise_result(0) {
+            PromiseResult::Successful(_) => {
+                let current_value: Balance = self.redeem_map.get(&predecessor_account_id).unwrap();
+                let total_redeemable = self.get_redeemable_tokens(Some(predecessor_account_id.clone()));
+                assert!(
+                    amount_to_redeem > 0 && amount_to_redeem <= total_redeemable - current_value,
+                    "Something wrong. The number of tokens to claim is invalid"
+                );
+                self.redeem_map.insert(&predecessor_account_id, &(current_value + amount_to_redeem));
+                env::log(
+                    format!("Account {} has redeemed {} / {} tokens", 
+                    predecessor_account_id, 
+                    self.redeem_map.get(&predecessor_account_id).unwrap(),
+                    total_redeemable,
+                ).as_bytes());
+                true
+            },
+            _ => false
+        }
     }
 
 }
