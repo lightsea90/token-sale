@@ -13,13 +13,14 @@ Functions:
 extern crate chrono;
 // To conserve gas, efficient serialization is achieved through Borsh (http://borsh.io/)
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-// use near_sdk::serde::{Serialize, Deserialize};
+use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::serde_json::json;
 use near_sdk::{env, near_bindgen, ext_contract};
 use near_sdk::collections::UnorderedMap;
-use near_sdk::{AccountId, Balance, Timestamp, Duration};
+use near_sdk::{AccountId, Balance, Timestamp, Duration, Gas};
 use near_sdk::{Promise, PromiseResult};
 use near_sdk::json_types::{U128, WrappedBalance, WrappedDuration};
+
 use chrono::prelude::{Utc, DateTime};
 
 near_sdk::setup_alloc!();
@@ -31,6 +32,14 @@ const SALE_DURATION: Duration = 24 * 60 * 60 * 1_000_000_000;
 const GRACE_DURATION: Duration = 24 * 60 * 60 * 1_000_000_000;
 const MINIMUM_ALLOWED_DEPOSIT: Balance = 200_000_000_000_000_000_000_000;
 const BALANCE_BASE_UNIT: Balance = 1_000_000_000_000_000_000_000_000;
+const DEFAULT_GAS_TO_PAY: Gas = 20_000_000_000_000;
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct NumberOfTokens {
+    amount: Balance,
+    formatted_amount: f64,
+}
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -57,7 +66,11 @@ impl Default for TokenSale {
             ft_contract_name: "thisisjustasampletoken".to_string(),
             num_of_tokens: TOTAL_NUMBER_OF_TOKENS_FOR_SALE,
             deposit_map: UnorderedMap::new(b"a".to_vec()),
-            start_time: TOKEN_SALE_START_TIME_ISO8601.parse::<DateTime<Utc>>().unwrap().timestamp_nanos() as Timestamp,
+            start_time: {
+                TOKEN_SALE_START_TIME_ISO8601
+                .parse::<DateTime<Utc>>()
+                .unwrap().timestamp_nanos() as Timestamp
+            },
             sale_duration: SALE_DURATION,
             grace_duration: GRACE_DURATION,
             is_finished: false,
@@ -106,6 +119,7 @@ impl TokenSale {
         return s;
     }
 
+    // reset the sale with new parameters
     pub fn reset(
         &mut self,
         ft_contract_name: AccountId,
@@ -136,6 +150,7 @@ impl TokenSale {
         };
     }
 
+    // deposit to the sale
     #[payable]
     pub fn deposit(&mut self) {
         assert!(
@@ -153,6 +168,7 @@ impl TokenSale {
         self.deposit_map.insert(&account_id, &(current_value + env::attached_deposit()));
     }
 
+    // withdraw from the sale
     pub fn withdraw(&mut self, amount: U128) -> Promise {
         let current_ts = env::block_timestamp();
         assert!(
@@ -180,11 +196,12 @@ impl TokenSale {
                     account_id, amount_to_withdraw,
                     &env::current_account_id(),
                     0,
-                    20_000_000_000_000,
+                    DEFAULT_GAS_TO_PAY,
                 )
             );
     }
 
+    // callback for withdrawal action
     pub fn on_withdrawal_finished(&mut self, predecessor_account_id: AccountId, amount_to_withdraw: Balance) -> bool {
         env::log(b"Calling on_withdrawal_finished now");
         assert!(
@@ -215,7 +232,9 @@ impl TokenSale {
         }
     }
 
-    pub fn get_total_deposit(&self) -> f64 {
+    pub fn get_total_deposit(&self) -> NumberOfTokens {
+        assert!(env::state_exists(), "The contract is not initialized");
+
         let deposit_list = self.deposit_map.values_as_vector();
         let total_deposit: Balance;
         if deposit_list.len() == 0 {
@@ -223,14 +242,20 @@ impl TokenSale {
         } else {
             total_deposit = deposit_list.iter().sum();
         }
-        return (total_deposit as f64) / (BALANCE_BASE_UNIT as f64);
+        return NumberOfTokens {
+            amount: total_deposit,
+            formatted_amount: (total_deposit as f64) / (BALANCE_BASE_UNIT as f64),
+        }
     }
 
+    // get sale status. Currently just log the details
     pub fn get_sale_status(&mut self) {
         env::log(format!("ft_contract_name:\t{}", self.ft_contract_name).as_bytes());
         env::log(format!("num_of_tokens:\t{}", self.num_of_tokens).as_bytes());
-        env::log(format!("total_deposit:\t{}", self.get_total_deposit()).as_bytes());
-        env::log(format!("current_price:\t{}", self.get_total_deposit() / (self.num_of_tokens as f64)).as_bytes());
+        env::log(format!("total_deposit:\t{}", self.get_total_deposit().formatted_amount).as_bytes());
+        env::log(format!("current_price:\t{}", 
+            self.get_total_deposit().formatted_amount / (self.num_of_tokens as f64)).as_bytes()
+        );
         let current_ts = env::block_timestamp();
         if current_ts < self.start_time {
             env::log(format!("period: NOT STARTED").as_bytes());
@@ -247,20 +272,22 @@ impl TokenSale {
         env::log(format!("is_finished:\t{}", self.is_finished).as_bytes());
     }
 
+    // Get the redeemable tokens in total
     pub fn get_redeemable_tokens(&self, account_id: Option<AccountId>) -> Balance {
-        let total_deposit = self.get_total_deposit();
-        if total_deposit.abs() < 1e-6 {
+        let total_deposit = self.get_total_deposit().amount;
+        if total_deposit == 0 {
             return 0;
         }
         let current_price = (total_deposit as f64) / (self.num_of_tokens as f64);
         let redeemable_num = (
             self.deposit_map.get(
                 &(account_id.unwrap_or(env::signer_account_id()))
-            ).unwrap_or(0) as f64 / (BALANCE_BASE_UNIT as f64) / current_price
+            ).unwrap_or(0) as f64 / current_price
         ) as Balance;
         return redeemable_num;
     }
 
+    // Finish the sale. Only valid after grace period
     pub fn finish(&mut self, force: Option<bool>) {
         assert!(!self.is_finished, "The token sale has already been finished");
         assert!(
@@ -287,6 +314,7 @@ impl TokenSale {
         self.is_finished = true;
     }
 
+    // Redeem the tokens back to wallet
     pub fn redeem(&mut self, request_num: WrappedBalance) -> Promise {
         let account_id = env::signer_account_id();
         let current_value = self.redeem_map.get(&account_id).unwrap_or(0);
@@ -303,18 +331,19 @@ impl TokenSale {
                 "receiver_id": account_id,
                 "amount": WrappedBalance::from(amount_to_redeem),
             }).to_string().as_bytes().to_vec(), 
-            1, 20_000_000_000_000,
+            1, DEFAULT_GAS_TO_PAY,
         );
 
         return payout_promise.then(
             ext_self::on_redeem_finished(
                 account_id, amount_to_redeem,
                 &env::current_account_id(),
-                0, 20_000_000_000_000,
+                0, DEFAULT_GAS_TO_PAY,
             )
         );
     }
 
+    // callback for redeem action
     pub fn on_redeem_finished(&mut self, predecessor_account_id: AccountId, amount_to_redeem: Balance) -> bool {
         env::log(b"Calling on_redeem_finished now");
         assert!(
@@ -328,7 +357,7 @@ impl TokenSale {
 
         match env::promise_result(0) {
             PromiseResult::Successful(_) => {
-                let current_value: Balance = self.redeem_map.get(&predecessor_account_id).unwrap();
+                let current_value: Balance = self.redeem_map.get(&predecessor_account_id).unwrap_or(0);
                 let total_redeemable = self.get_redeemable_tokens(Some(predecessor_account_id.clone()));
                 assert!(
                     amount_to_redeem > 0 && amount_to_redeem <= total_redeemable - current_value,
@@ -396,8 +425,7 @@ mod tests {
         let mut contract = TokenSale::default();
         contract.deposit();
         assert!(
-            (contract.get_total_deposit() -
-                ((env::attached_deposit() as f64) / (BALANCE_BASE_UNIT as f64))).abs() < 1e-6,
+            contract.get_total_deposit().amount == env::attached_deposit(),
             "Deposit error"
         );
     }
