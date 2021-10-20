@@ -27,8 +27,9 @@
     "shelljs": "~0.8.4"
   },
   "dependencies": {
+    "moment": "^2.29.1",
     "near-api-js": "~0.41.0",
-    "regenerator-runtime": "~0.13.5"
+    "regenerator-runtime": "^0.13.9"
   },
   "jest": {
     "testEnvironment": "near-cli/test_environment",

@@ -41,6 +41,26 @@ pub struct NumberOfTokens {
     formatted_amount: f64,
 }
 
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct SaleInfo {
+    ft_contract_name: AccountId,
+    decimals: u8,
+    symbol: String,
+    num_of_tokens: Balance,
+    start_time: Timestamp,
+    sale_duration: Duration,
+    grace_duration: Duration,
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct UserSaleInfo {
+    deposit: WrappedBalance,
+    total_allocated_tokens: WrappedBalance,
+    redeemed_amount: WrappedBalance,
+}
+
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct TokenSale {
@@ -248,43 +268,52 @@ impl TokenSale {
         }
     }
 
-    // get sale status. Currently just log the details
-    pub fn get_sale_status(&mut self) {
-        env::log(format!("ft_contract_name:\t{}", self.ft_contract_name).as_bytes());
-        env::log(format!("num_of_tokens:\t{}", self.num_of_tokens).as_bytes());
-        env::log(format!("total_deposit:\t{}", self.get_total_deposit().formatted_amount).as_bytes());
-        env::log(format!("current_price:\t{}", 
-            self.get_total_deposit().formatted_amount / (self.num_of_tokens as f64)).as_bytes()
-        );
-        let current_ts = env::block_timestamp();
-        if current_ts < self.start_time {
-            env::log(format!("period: NOT STARTED").as_bytes());
-        } else if current_ts <= self.start_time + self.sale_duration {
-            env::log(format!("period: ON SALE").as_bytes());
-        } else if current_ts <= self.start_time + self.sale_duration + self.grace_duration {
-            env::log(format!("period: ON GRACE").as_bytes());
-        } else {
-            env::log(format!("period: FINISHED").as_bytes());
-            if !self.is_finished {
-                self.finish(Some(false));
-            }
+    // get static info of the sale
+    pub fn get_sale_info(&self) -> SaleInfo {
+        return SaleInfo {
+            ft_contract_name: self.ft_contract_name.clone(),
+            num_of_tokens: self.num_of_tokens,
+            start_time: self.start_time,
+            sale_duration: self.sale_duration,
+            grace_duration: self.grace_duration,
+
+            // TODO: get it from FT metadata
+            decimals: 8,
+            symbol: String::from("AKUX"),
         }
-        env::log(format!("is_finished:\t{}", self.is_finished).as_bytes());
+    }
+
+    // check sale status and trigger finish if need
+    pub fn check_sale_status(&self) -> String {
+        let current_ts = env::block_timestamp();
+        let current_sale_status: String = {
+            if current_ts < self.start_time {
+                String::from("NOT_STARTED")
+            } else if current_ts <= self.start_time + self.sale_duration {
+                String::from("ON_SALE")
+            } else if current_ts <= self.start_time + self.sale_duration + self.grace_duration {
+                String::from("ON_GRACE")
+            } else {
+                env::log(format!("period: FINISHED").as_bytes());
+                String::from("FINISHED")
+            }
+        };
+        return current_sale_status;
     }
 
     // Get the redeemable tokens in total
-    pub fn get_redeemable_tokens(&self, account_id: Option<AccountId>) -> Balance {
+    pub fn get_total_allocated_tokens(&mut self, account_id: Option<AccountId>) -> Balance {
         let total_deposit = self.get_total_deposit().amount;
         if total_deposit == 0 {
             return 0;
         }
-        let current_price = (total_deposit as f64) / (self.num_of_tokens as f64);
-        let redeemable_num = (
-            self.deposit_map.get(
-                &(account_id.unwrap_or(env::signer_account_id()))
-            ).unwrap_or(0) as f64 / current_price
-        ) as Balance;
-        return redeemable_num;
+        // let current_price = (total_deposit as f64) / (self.num_of_tokens as f64);
+        let account_id = account_id.unwrap_or(env::signer_account_id());
+        let total_redeemable_num = (
+            (self.deposit_map.get(&account_id).unwrap_or(0) as f64) 
+            * (self.num_of_tokens as f64) / (total_deposit as f64)
+        ) as Balance - self.redeem_map.get(&account_id).unwrap_or(0);
+        return total_redeemable_num;
     }
 
     // Finish the sale. Only valid after grace period
@@ -301,11 +330,12 @@ impl TokenSale {
         let account_list = self.deposit_map.keys_as_vector();
         let deposit_list = self.deposit_map.values_as_vector();
         let total_deposit: Balance = deposit_list.iter().sum();
-        let final_price = (total_deposit as f64) / (self.num_of_tokens as f64);
+        // let final_price = (total_deposit as f64) / (self.num_of_tokens as f64);
         
         for (i, account_id) in account_list.iter().enumerate() {
             let redeemable_tokens = (
-                (deposit_list.get(i as u64).unwrap() as f64) / final_price
+                (deposit_list.get(i as u64).unwrap() as f64) 
+                * (self.num_of_tokens as f64) / (total_deposit as f64)
             ) as Balance;
             env::log(format!(
                 "Account {} received {} tokens", account_id, redeemable_tokens,
@@ -318,7 +348,7 @@ impl TokenSale {
     pub fn redeem(&mut self, request_num: WrappedBalance) -> Promise {
         let account_id = env::signer_account_id();
         let current_value = self.redeem_map.get(&account_id).unwrap_or(0);
-        let total_redeemable = self.get_redeemable_tokens(Some(env::signer_account_id()));
+        let total_redeemable = self.get_total_allocated_tokens(Some(env::signer_account_id()));
         let amount_to_redeem: Balance = request_num.into();
         assert!(
             amount_to_redeem > 0 && amount_to_redeem <= total_redeemable - current_value,
@@ -343,6 +373,15 @@ impl TokenSale {
         );
     }
 
+    pub fn get_user_sale(&mut self) -> UserSaleInfo {
+        let account_id = env::signer_account_id();
+        return UserSaleInfo {
+            deposit: WrappedBalance::from(self.deposit_map.get(&account_id).unwrap_or(0)),
+            redeemed_amount: WrappedBalance::from(self.redeem_map.get(&account_id).unwrap_or(0)),
+            total_allocated_tokens: WrappedBalance::from(self.get_total_allocated_tokens(Some(account_id))),
+        };
+    }
+
     // callback for redeem action
     pub fn on_redeem_finished(&mut self, predecessor_account_id: AccountId, amount_to_redeem: Balance) -> bool {
         env::log(b"Calling on_redeem_finished now");
@@ -358,7 +397,7 @@ impl TokenSale {
         match env::promise_result(0) {
             PromiseResult::Successful(_) => {
                 let current_value: Balance = self.redeem_map.get(&predecessor_account_id).unwrap_or(0);
-                let total_redeemable = self.get_redeemable_tokens(Some(predecessor_account_id.clone()));
+                let total_redeemable = self.get_total_allocated_tokens(Some(predecessor_account_id.clone()));
                 assert!(
                     amount_to_redeem > 0 && amount_to_redeem <= total_redeemable - current_value,
                     "Something wrong. The number of tokens to claim is invalid"
