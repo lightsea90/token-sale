@@ -1,6 +1,6 @@
 import 'regenerator-runtime/runtime';
 
-import { initContract, login, logout, nearUtils } from './utils';
+import { initContract, login, logout, nearUtils, initTokenContract } from './utils';
 // import { BN } from 'bn.js';
 const BN = require('bn.js');
 
@@ -9,6 +9,7 @@ console.log(new BN(10).pow(new BN(3)).toNumber());
 import getConfig from './config';
 import moment from 'moment';
 const DEFAULT_GAS = 300000000000000;
+const DEFAULT_STORAGE_DEPOSIT = 0.00125;
 
 const { networkId } = getConfig(process.env.NODE_ENV || 'development');
 
@@ -17,52 +18,6 @@ let currentTotalDeposit;
 let saleInfo;
 let currentPeriod;
 let currentUserSale;
-
-const submitButton = document.querySelector('form button');
-
-document.querySelector('form#abc').onsubmit = async (event) => {
-    event.preventDefault();
-
-    // get elements from the form using their id attribute
-    const { fieldset, greeting } = event.target.elements;
-
-    // disable the form while the value gets updated on-chain
-    fieldset.disabled = true;
-
-    try {
-        
-        // make an update call to the smart contract
-        await window.contract.set_greeting({
-            // pass the value that the user entered in the greeting field
-            message: greeting.value
-        });
-    } catch (e) {
-        alert(
-            'Something went wrong! ' +
-            'Maybe you need to sign out and back in? ' +
-            'Check your browser console for more info.'
-        );
-        throw e;
-    } finally {
-        // re-enable the form, whether the call succeeded or failed
-        fieldset.disabled = false;
-    }
-
-    // disable the save button, since it now matches the persisted value
-    submitButton.disabled = true;
-
-    // update the greeting in the UI
-    await fetchGreeting();
-
-    // show notification
-    document.querySelector('[data-behavior=notification]').style.display = 'block';
-
-    // remove notification again after css animation completes
-    // this allows it to be shown again next time the form is submitted
-    setTimeout(() => {
-        document.querySelector('[data-behavior=notification]').style.display = 'none';
-    }, 11000);
-}
 
 document.querySelector('form#deposit').onsubmit = async (event) => {
     event.preventDefault();
@@ -82,7 +37,10 @@ document.querySelector('form#deposit').onsubmit = async (event) => {
         );
         throw e;
     } finally {
-        document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
+        setTimeout(() => {
+            document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
+            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction..."
+        }, 11000);
     }
     console.log(res);
 }
@@ -97,6 +55,11 @@ document.querySelector('form#withdraw').onsubmit = async (event) => {
     try {
         document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'block';
         res = await window.contract.withdraw({amount: nearUtils.format.parseNearAmount(amount)}, DEFAULT_GAS);
+        if (res) {
+            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction... DONE"
+        } else {
+            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction... FAIL"
+        }
     } catch (e) {
         alert(
             'Something went wrong! ' +
@@ -105,23 +68,33 @@ document.querySelector('form#withdraw').onsubmit = async (event) => {
         );
         throw e;
     } finally {
-        document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
+        setTimeout(() => {
+            console.log("turn off notification now");
+            document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
+            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction..."
+        }, 11000);
     }
     console.log(res);
 }
 
 document.querySelector('form#redeem').onsubmit = async (event) => {
     event.preventDefault();
-    
-    console.log(event.target.elements.redeem);
-    // let dec = new BN(10).pow(new BN(saleInfo.decimals));
-    let amount = event.target.elements.redeem.value;
-    // console.log(formatTokenAmount(amount, saleInfo.decimals));
     let res;
 
+    let storageDeposit = await window.tokenContract.storage_balance_of({account_id: window.accountId});
+    if (storageDeposit === null) {
+        await window.tokenContract.storage_deposit({}, DEFAULT_GAS, nearUtils.format.parseNearAmount(DEFAULT_STORAGE_DEPOSIT.toString()));
+    }
+
     try {
+        console.log("Show noti")
         document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'block';
-        res = await window.contract.redeem({request_num: formatTokenAmountToIndivisible(amount, saleInfo.decimals)}, DEFAULT_GAS);
+        res = await window.contract.redeem({}, DEFAULT_GAS);
+        if (res) {
+            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction... DONE"
+        } else {
+            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction... FAIL"
+        }
     } catch (e) {
         alert(
             'Something went wrong! ' +
@@ -130,20 +103,13 @@ document.querySelector('form#redeem').onsubmit = async (event) => {
         );
         throw e;
     } finally {
-        document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
+        setTimeout(() => {
+            document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
+            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction..."
+        }, 11000);
     }
     console.log(res);
 
-    // show notification
-    document.querySelector('[data-behavior=notification]').style.display = 'block';
-    let viewTransactionLink = document.querySelector('[data-behavior=notification] a#view-transaction');
-    viewTransactionLink.href = viewTransactionLink.href + "window.contract.res[0]";
-
-    // remove notification again after css animation completes
-    // this allows it to be shown again next time the form is submitted
-    setTimeout(() => {
-        document.querySelector('[data-behavior=notification]').style.display = 'none';
-    }, 11000);
 }
 
 document.querySelectorAll('input#deposit, input#withdraw, input#redeem').forEach(elem => {
@@ -194,6 +160,7 @@ async function fetchUserData() {
         document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'block';
         currentUserSale = await window.contract.get_user_sale();
         saleInfo = await window.contract.get_sale_info();
+        currentPeriod = await window.contract.check_sale_status();
     } catch (e) {
         alert(
             'Something went wrong! ' +
@@ -202,13 +169,25 @@ async function fetchUserData() {
         );
         throw e;
     } finally {
-        document.querySelector('[data-behavior=notification]').style.display = 'none';
+        setTimeout(() => {
+            document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
+        }, 11000);
     }
-    
+
     (
         document
-        .querySelector('[data-behavior=max-redeemable]')
-        .innerText = `${formatTokenAmountToHumanReadable(currentUserSale.redeemed_amount.toString(), saleInfo.decimals)} / ${formatTokenAmountToHumanReadable(currentUserSale.total_allocated_tokens.toString(), saleInfo.decimals)}`
+        .querySelector('[data-behavior=my-deposit]')
+        .innerText = `${nearUtils.format.formatNearAmount(currentUserSale.deposit)} NEAR`
+    );
+    (
+        document
+        .querySelector('input#redeem')
+        .value = `${formatTokenAmountToHumanReadable(currentUserSale.total_allocated_tokens, saleInfo.decimals)}`
+    );
+    (
+        document
+        .querySelector('form#redeem button')
+        .disabled = (currentPeriod != "FINISHED") || currentUserSale.is_redeemed
     );
 }
 
@@ -216,6 +195,8 @@ async function fetchContractStatus() {
     currentTotalDeposit = await window.contract.get_total_deposit();
     saleInfo = await window.contract.get_sale_info();
     currentPeriod = await window.contract.check_sale_status();
+
+    await initTokenContract(saleInfo.ft_contract_name);
 
     console.log(currentTotalDeposit);
     console.log(saleInfo);
@@ -234,7 +215,7 @@ async function fetchContractStatus() {
     (
         document
         .querySelector('[data-behavior=num-of-tokens]')
-        .innerText = saleInfo.num_of_tokens
+        .innerText = formatTokenAmountToHumanReadable(saleInfo.num_of_tokens.toString(), saleInfo.decimals)
     );
     (
         document
@@ -255,6 +236,11 @@ async function fetchContractStatus() {
         document
         .querySelector('[data-behavior=current-period]')
         .innerText = currentPeriod
+    );
+    (
+        document
+        .querySelector('[data-behavior=token-price]')
+        .innerText = currentTotalDeposit.formatted_amount / formatTokenAmountToHumanReadable(saleInfo.num_of_tokens.toString(), saleInfo.decimals)
     );
 
 }

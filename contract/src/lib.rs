@@ -58,7 +58,7 @@ pub struct SaleInfo {
 pub struct UserSaleInfo {
     deposit: WrappedBalance,
     total_allocated_tokens: WrappedBalance,
-    redeemed_amount: WrappedBalance,
+    is_redeemed: u8,
 }
 
 #[near_bindgen]
@@ -71,7 +71,7 @@ pub struct TokenSale {
     sale_duration: Duration,
     grace_duration: Duration,
     is_finished: bool,
-    redeem_map: UnorderedMap<AccountId, Balance>,
+    redeemed_map: UnorderedMap<AccountId, u8>,
 }
 
 #[ext_contract(ext_self)]
@@ -94,7 +94,7 @@ impl Default for TokenSale {
             sale_duration: SALE_DURATION,
             grace_duration: GRACE_DURATION,
             is_finished: false,
-            redeem_map: UnorderedMap::new(b"c".to_vec()),
+            redeemed_map: UnorderedMap::new(b"c".to_vec()),
         }
     }
 }
@@ -131,7 +131,7 @@ impl TokenSale {
             sale_duration: sale_duration_in_min.into(),
             grace_duration: grace_duration_in_min.into(),
             is_finished: false,
-            redeem_map: UnorderedMap::new(b"cx".to_vec()),
+            redeemed_map: UnorderedMap::new(b"cx".to_vec()),
             
         };
         s.sale_duration *=  60 * 1_000_000_000;
@@ -166,7 +166,7 @@ impl TokenSale {
             self.deposit_map.clear();
         };
         if reset_redeem {
-            self.redeem_map.clear();
+            self.redeemed_map.clear();
         };
     }
 
@@ -312,7 +312,7 @@ impl TokenSale {
         let total_redeemable_num = (
             (self.deposit_map.get(&account_id).unwrap_or(0) as f64) 
             * (self.num_of_tokens as f64) / (total_deposit as f64)
-        ) as Balance - self.redeem_map.get(&account_id).unwrap_or(0);
+        ) as Balance;
         return total_redeemable_num;
     }
 
@@ -345,13 +345,15 @@ impl TokenSale {
     }
 
     // Redeem the tokens back to wallet
-    pub fn redeem(&mut self, request_num: WrappedBalance) -> Promise {
+    pub fn redeem(&mut self) -> Promise {
         let account_id = env::signer_account_id();
-        let current_value = self.redeem_map.get(&account_id).unwrap_or(0);
-        let total_redeemable = self.get_total_allocated_tokens(Some(env::signer_account_id()));
-        let amount_to_redeem: Balance = request_num.into();
+        let amount_to_redeem = self.get_total_allocated_tokens(Some(env::signer_account_id()));
         assert!(
-            amount_to_redeem > 0 && amount_to_redeem <= total_redeemable - current_value,
+            self.redeemed_map.get(&account_id).unwrap_or(0) == 0,
+            "User has already redeemed",
+        );
+        assert!(
+            amount_to_redeem > 0 && amount_to_redeem <= self.num_of_tokens,
             "The number of tokens to claim is invalid"
         );
 
@@ -377,8 +379,8 @@ impl TokenSale {
         let account_id = env::signer_account_id();
         return UserSaleInfo {
             deposit: WrappedBalance::from(self.deposit_map.get(&account_id).unwrap_or(0)),
-            redeemed_amount: WrappedBalance::from(self.redeem_map.get(&account_id).unwrap_or(0)),
-            total_allocated_tokens: WrappedBalance::from(self.get_total_allocated_tokens(Some(account_id))),
+            total_allocated_tokens: WrappedBalance::from(self.get_total_allocated_tokens(Some(account_id.clone()))),
+            is_redeemed: self.redeemed_map.get(&account_id).unwrap_or(0),
         };
     }
 
@@ -396,18 +398,19 @@ impl TokenSale {
 
         match env::promise_result(0) {
             PromiseResult::Successful(_) => {
-                let current_value: Balance = self.redeem_map.get(&predecessor_account_id).unwrap_or(0);
-                let total_redeemable = self.get_total_allocated_tokens(Some(predecessor_account_id.clone()));
+                let amount_to_redeem_in_theory = self.get_total_allocated_tokens(Some(predecessor_account_id.clone()));
                 assert!(
-                    amount_to_redeem > 0 && amount_to_redeem <= total_redeemable - current_value,
-                    "Something wrong. The number of tokens to claim is invalid"
+                    amount_to_redeem == amount_to_redeem_in_theory,
+                    "Something wrong. Amount to redeem has changed",
                 );
-                self.redeem_map.insert(&predecessor_account_id, &(current_value + amount_to_redeem));
+                assert!(
+                    amount_to_redeem > 0 && amount_to_redeem <= self.num_of_tokens,
+                    "Something wrong. The number of tokens to claim is invalid",
+                );
+                self.redeemed_map.insert(&predecessor_account_id, &1);
                 env::log(
-                    format!("Account {} has redeemed {} / {} tokens", 
-                    predecessor_account_id, 
-                    self.redeem_map.get(&predecessor_account_id).unwrap(),
-                    total_redeemable,
+                    format!("Account {} has redeemed {} tokens", 
+                    predecessor_account_id, amount_to_redeem,
                 ).as_bytes());
                 true
             },

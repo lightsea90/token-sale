@@ -36,7 +36,7 @@
                     for="deposit"
                     style="display: block; color: var(--gray); margin-bottom: 0.5em"
                 >
-                    Deposit:
+                    Deposit: <span data-behavior="my-deposit"></span>
                 </label>
                 <div style="display: flex">
                     <input
@@ -75,7 +75,7 @@
                     >
                     Redeem:
                     </label>
-                    <span data-behavior="max-redeemable"></span>
+                    <!-- <span data-behavior="max-redeemable"></span> -->
                 </div>
                 
                 <div style="display: flex">
@@ -84,9 +84,9 @@
                         autocomplete="off"
                         id="redeem"
                         data-behavior="redeem"
+                        disabled
                     />
                     <button disabled style="border-radius: 0 5px 5px 0">Submit</button>
-                    <div class="spinner-border"></div>
                 </div>
             </form>
         </main>
