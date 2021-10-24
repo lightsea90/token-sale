@@ -151,6 +151,10 @@ impl TokenSale {
         reset_redeem: bool,
     ) {
         assert!(env::state_exists(), "The contract is not initialized");
+        assert!(
+            env::current_account_id() == env::signer_account_id(), 
+            "Function called not from the contract owner itself",
+        );
 
         self.ft_contract_name = ft_contract_name;
         self.num_of_tokens = num_of_tokens.into();
@@ -270,6 +274,7 @@ impl TokenSale {
 
     // get static info of the sale
     pub fn get_sale_info(&self) -> SaleInfo {
+        // env::log(format!("{}", env::current_account_id()).as_bytes());
         return SaleInfo {
             ft_contract_name: self.ft_contract_name.clone(),
             num_of_tokens: self.num_of_tokens,
