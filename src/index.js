@@ -56,9 +56,11 @@ document.querySelector('form#withdraw').onsubmit = async (event) => {
         document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'block';
         res = await window.contract.withdraw({amount: nearUtils.format.parseNearAmount(amount)}, DEFAULT_GAS);
         if (res) {
-            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction... DONE"
+            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Withdrawal DONE"
+            document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'block';
         } else {
-            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction... FAIL"
+            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Withdrawal FAIL"
+            document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'block';
         }
     } catch (e) {
         alert(
@@ -69,10 +71,11 @@ document.querySelector('form#withdraw').onsubmit = async (event) => {
         throw e;
     } finally {
         setTimeout(() => {
-            console.log("turn off notification now");
+            console.log("Turn off notification");
             document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
             document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction..."
-        }, 11000);
+            window.location.reload();
+        }, 5000);
     }
     console.log(res);
 }
@@ -103,10 +106,14 @@ document.querySelector('form#redeem').onsubmit = async (event) => {
         );
         throw e;
     } finally {
-        setTimeout(() => {
-            document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
-            document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction..."
-        }, 11000);
+        console.log("Turn off notification");
+        document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
+        document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction..."
+        window.location.reload();
+        // setTimeout(() => {
+        //     document.querySelector('[data-behavior=waiting-for-transaction]').style.display = 'none';
+        //     document.querySelector('[data-behavior=waiting-for-transaction]').innerText = "Waiting for transaction..."
+        // }, 11000);
     }
     console.log(res);
 
