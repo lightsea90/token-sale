@@ -216,6 +216,11 @@ async function fetchContractStatus() {
     );
     (
         document
+        .querySelector('[data-behavior=ft-symbol]')
+        .innerText = saleInfo.symbol
+    );
+    (
+        document
         .querySelector('[data-behavior=ft-contract-name]')
         .innerText = saleInfo.ft_contract_name
     );
