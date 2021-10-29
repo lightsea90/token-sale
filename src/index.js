@@ -18,6 +18,7 @@ let currentTotalDeposit;
 let saleInfo;
 let currentPeriod;
 let currentUserSale;
+let tokenInfo;
 
 document.querySelector('form#deposit').onsubmit = async (event) => {
     event.preventDefault();
@@ -189,7 +190,7 @@ async function fetchUserData() {
     (
         document
         .querySelector('input#redeem')
-        .value = `${formatTokenAmountToHumanReadable(currentUserSale.total_allocated_tokens, saleInfo.decimals)}`
+        .value = `${formatTokenAmountToHumanReadable(currentUserSale.total_allocated_tokens, tokenInfo.decimals)}`
     );
     (
         document
@@ -205,6 +206,9 @@ async function fetchContractStatus() {
 
     await initTokenContract(saleInfo.ft_contract_name);
 
+    tokenInfo = await window.tokenContract.ft_metadata();
+    console.log(tokenInfo);
+
     console.log(currentTotalDeposit);
     console.log(saleInfo);
     console.log(currentPeriod);
@@ -217,7 +221,7 @@ async function fetchContractStatus() {
     (
         document
         .querySelector('[data-behavior=ft-symbol]')
-        .innerText = saleInfo.symbol
+        .innerText = tokenInfo.symbol
     );
     (
         document
@@ -227,7 +231,7 @@ async function fetchContractStatus() {
     (
         document
         .querySelector('[data-behavior=num-of-tokens]')
-        .innerText = formatTokenAmountToHumanReadable(saleInfo.num_of_tokens.toString(), saleInfo.decimals)
+        .innerText = formatTokenAmountToHumanReadable(saleInfo.num_of_tokens.toString(), tokenInfo.decimals)
     );
     (
         document
@@ -252,7 +256,7 @@ async function fetchContractStatus() {
     (
         document
         .querySelector('[data-behavior=token-price]')
-        .innerText = currentTotalDeposit.formatted_amount / formatTokenAmountToHumanReadable(saleInfo.num_of_tokens.toString(), saleInfo.decimals)
+        .innerText = currentTotalDeposit.formatted_amount / formatTokenAmountToHumanReadable(saleInfo.num_of_tokens.toString(), tokenInfo.decimals)
     );
 
 }
