@@ -1,0 +1,12 @@
+aside {
+    animation: notify ease-in-out 10s;
+    background-color: var(--shadow);
+    border-radius: 5px;
+    bottom: 0;
+    font-size: 0.8em;
+    margin: 1em;
+    padding: 1em;
+    position: fixed;
+    transform: translateY(10em);
+    right: 0;
+}
