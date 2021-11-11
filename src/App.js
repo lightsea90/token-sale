@@ -11,6 +11,12 @@ export default App = () => {
   //after submitting the from, we want to show notification
   const [showNotification, setShowNotification] = useState();
 
+
+  const handleSignedIn = () => { };
+  const handleSignedOut = () => { };
+  const fetchUserData = () => { };
+  const fetchContractStatus = () => { };
+
   // The useEffect hook can be used to fire side-effects during render
   useEffect(() => {
     if (window.walletConnection.isSignedIn()) {

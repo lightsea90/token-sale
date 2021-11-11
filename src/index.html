@@ -1,5 +1,6 @@
-<!DOCTYPE html/>
+<!DOCTYPE html />
 <html>
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,110 +9,19 @@
     <title>Welcome to TokenHub</title>
     <link rel="stylesheet" href="global.css">
 </head>
+
 <body>
-    <main id="signed-out-flow" style="display: none">
-        <h1>Welcome to TokenHub!</h1>
-        <p style="text-align: center;">
-            We based on NEAR Protocol. Please sign in by your Near wallet if you want to join us.
-        </p>
-        <p style="text-align: center; margin-top: 2.5em">
-            <button id="sign-in-button">Sign in</button>
-        </p>
-    </main>
-    
-    <div id="signed-in-flow" style="display: none">
-        <button class="button" style="float: right; background: red" id="sign-out-button">
-            Sign out
-        </button>
-        <main>
-            <h1>
-                <label style="color: rebeccapurple;">
-                Welcome to TokenHub
-                </label>
-                <span data-behavior="account-id"></span>!
-            </h1>
-            <form id="abc"></form>
-            <form id="deposit">
-                <label
-                    for="deposit"
-                    style="display: block; color: var(--gray); margin-bottom: 0.5em"
-                >
-                    Deposit: <span data-behavior="my-deposit"></span>
-                </label>
-                <div style="display: flex">
-                    <input
-                        style="flex: 1"
-                        autocomplete="off"
-                        id="deposit"
-                        data-behavior="deposit"
-                    />
-                    <button disabled style="border-radius: 0 5px 5px 0">Submit</button>
-                </div>
-            </form>
-
-            <form id="withdraw">
-                <label
-                    for="withdraw"
-                    style="display: block; color: var(--gray); margin-bottom: 0.5em"
-                >
-                    Withdraw:
-                </label>
-                <div style="display: flex">
-                    <input
-                        style="flex: 1"
-                        autocomplete="off"
-                        id="withdraw"
-                        data-behavior="withdraw"
-                    />
-                    <button disabled style="border-radius: 0 5px 5px 0">Submit</button>
-                </div>
-            </form>
-
-            <form id="redeem">
-                <div style="display: flex">
-                    <label
-                        for="redeem"
-                        style="display: block; color: var(--gray); margin-bottom: 0.5em"
-                    >
-                    Redeem:
-                    </label>
-                    <!-- <span data-behavior="max-redeemable"></span> -->
-                </div>
-                
-                <div style="display: flex">
-                    <input
-                        style="flex: 1"
-                        autocomplete="off"
-                        id="redeem"
-                        data-behavior="redeem"
-                        disabled
-                    />
-                    <button disabled style="border-radius: 0 5px 5px 0">Submit</button>
-                </div>
-            </form>
-        </main>
-    </div>
-    <div id="common">
-        <main>
-            <hr>
-            <p>Token: <span data-behavior="ft-symbol"></span></p>
-            <p>Contract: <span data-behavior="ft-contract-name"></span></p>
-            <p>Number of tokens for sale: <span data-behavior="num-of-tokens"></span></p>
-            <p>Start time: <span data-behavior="start-time"></span></p>
-            <p>Sale duration: <span data-behavior="sale-duration"></span></p>
-            <p>Grace duration: <span data-behavior="grace-duration"></span></p>
-            <p>Current period: <span data-behavior="current-period"></span></p>
-            <p>Total deposit: <span data-behavior="total-deposit"></span></p>
-            <p>Price: <span data-behavior="token-price"></span></p>
-        </main>
-    </div>
+    <!--Signed-out-flow--->
+    <!--Signed-in-flow-->
+    <!--Common-->
 
     <aside data-behavior="notification" style="display: none">
         <a target="_blank" href="https://explorer.testnet.near.org/accounts/"></a>
         called method: 'set_greeting' in contract:
         <a target="_blank" href="https://explorer.testnet.near.org/accounts/"></a>
         <footer>
-            <div><a id="view-transaction" target="_blank" href="https://explorer.testnet.near.org/transactions/">View transaction</a></div>
+            <div><a id="view-transaction" target="_blank" href="https://explorer.testnet.near.org/transactions/">View
+                    transaction</a></div>
             <div>Just now</div>
         </footer>
     </aside>
@@ -122,4 +32,5 @@
 
     <script src="./index.js"></script>
 </body>
+
 </html>
