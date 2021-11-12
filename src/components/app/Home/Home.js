@@ -1,18 +1,23 @@
-import { Container } from "@mui/material"
+import { Container, Button, Typography } from "@mui/material"
 
-export default Home = () => {
+export default Home = (props) => {
+    const { signOut, accountInfo } = props;
+
     return (
-        <Container>
-            <button class="button" style="float: right; background: red" id="sign-out-button">
+        <>
+            <Button
+                variant="contained"
+                onclick={() => { signOut(); }}
+                color="error"
+                sx={{ position: 'right' }}
+            >
                 Sign out
-            </button>
-            <main>
-                <h1>
-                    <label style="color: rebeccapurple;">
-                        Welcome to TokenHub
-                    </label>
+            </Button>
+            <Container fixed>
+                <Typography variant="h3">
+                    Welcome to TokenHub
                     <span data-behavior="account-id"></span>!
-                </h1>
+                </Typography>
                 <form id="abc"></form>
                 <form id="deposit">
                     <label
@@ -72,7 +77,7 @@ export default Home = () => {
                         <button disabled style="border-radius: 0 5px 5px 0">Submit</button>
                     </div>
                 </form>
-            </main>
-        </Container>
+            </Container>
+        </>
     )
 }

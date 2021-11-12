@@ -1,6 +1,7 @@
 import { Container } from "@mui/material"
 
 export default Login = (props) => {
+    const { login } = props;
     return (
         <Container>
             <h1>Welcome to TokenHub!</h1>
