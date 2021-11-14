@@ -1,21 +1,44 @@
-import { createContext, useReducer } from "react";
+import React from 'react'
+import { createContext, useReducer, useEffect } from "react";
 import getConfig from "../config";
 import { connect, Contract, keyStores, WalletConnection, utils } from "near-api-js";
-import { async } from "regenerator-runtime";
 
-const initState = {
-    walletConnection,
-    accountId,
-    contract,
-    tokenContract,
-};
+// const initTokenState = {
+//     walletConnection: null,
+//     accountId: null,
+//     contract: null
+// };
 
-const TokenSalesContext = createContext(initState);
+// const initUserContract = {
+//     userSale: null,
+//     userPeriod: null
+// };
+
+// const initTokenContract = {
+//     totalDeposit: 0,
+//     tokenPeriod: null
+// };
+
+// const initTokenInfo = {
+//     symbol: null,
+//     decimals: 0
+// };
+
+const TokenSalesContext = createContext();
 
 const TokenSalesProvider = (props) => {
     const [tokenState, setTokenState] = useReducer((state, newState) => {
         return ({ ...state, ...newState });
-    }, initState);
+    }, null);
+
+    const [userContract, setUserContract] = useReducer((state, newState) => {
+        return ({ ...state, ...newState });
+    }, null);
+
+    const [tokenContract, setTokenContract] = useReducer((state, newState) => {
+        return ({ ...state, ...newState });
+    }, null);
+
     const { children } = props;
     const nearConfig = getConfig(process.env.NODE_ENV || 'development');
     const nearUtils = utils;
@@ -80,7 +103,7 @@ const TokenSalesProvider = (props) => {
                 ],
             }
         );
-        setTokenState({ tokenContract });
+        return tokenContract;
     };
 
     const login = () => {
@@ -91,20 +114,66 @@ const TokenSalesProvider = (props) => {
         const { walletConnection } = tokenState;
         walletConnection.requestSignIn(nearConfig.contractName);
     };
+
     const logout = () => {
         const { walletConnection } = tokenState;
         walletConnection.signOut();
         // window.location.replace(window.location.origin + window.location.pathname);
-    }
+    };
+
+    const fetchUserData = async () => {
+        const { contract } = tokenState;
+        const userSale = await contract.get_user_sale();
+        setUserContract(userSale);
+    };
+
+    const fetchContractStatus = async (contract) => {
+        try {
+            const result = await Promise.all([contract.get_sale_info(), contract.get_total_deposit(), contract.check_sale_status()]);
+            const saleInfo = result[0];
+            const totalDeposit = result[1];
+            const tokenPeriod = result[2];
+            const tokenContract = await initTokenContract(saleInfo.ft_contract_name);
+
+            const tokenInfo = await tokenContract.ft_metadata();
+            // setTokenInfo(tokenInfo);
+
+            setTokenContract({
+                ...tokenContract, ...{
+                    totalDeposit: totalDeposit,
+                    tokenPeriod: tokenPeriod,
+                    saleInfo: saleInfo,
+                    tokenInfo: tokenInfo
+                }
+            });
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    useEffect(async () => {
+        if (tokenState) {
+            const { contract } = tokenState;
+            if (contract) {
+                await fetchContractStatus(contract);
+            }
+        }
+    }, [tokenState]);
 
     return (
         <TokenSalesContext.Provider
             value={{
                 tokenState,
-                setTokenState,
+                tokenContract,
+                userContract,
                 nearUtils,
+                setTokenState,
+                setTokenContract,
+                setUserContract,
                 initContract,
                 initTokenContract,
+                fetchContractStatus,
+                fetchUserData,
                 login,
                 logout
             }}

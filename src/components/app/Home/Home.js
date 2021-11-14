@@ -1,13 +1,63 @@
-import { Container, Button, Typography } from "@mui/material"
+import React, { useContext, useState } from 'react';
+import { Container, Button, Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, LoadingButton, SendIcon } from "@mui/material";
+import FormInput from "../../base/FormInput/FormInput";
+import { TokenSalesContext } from '../../../contexts/TokenSalesContext';
+import { TokenUtils } from '../../../helpers/TokenUtils';
 
-export default Home = (props) => {
-    const { signOut, accountInfo } = props;
+export const ActiveMode = {
+    "DEPOSIT": "DEPOSIT",
+    "WITHDRAW": "WITHDRAW",
+    "REDEEM": "REDEEM"
+}
 
+const Home = (props) => {
+    const { signOut } = props;
+    const {
+        userContract,
+        nearUtils,
+        tokenContract: { tokenInfo, tokenPeriod },
+        tokenState: { walletConnection, contract }
+    } = useContext(TokenSalesContext);
+    const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+    const [activeMode, setActiveMode] = useState(ActiveMode.WITHDRAW);
+    const [deposit, setDeposit] = useState(0);
+    const [withdraw, setWithdraw] = useState(0);
+    const [redeem, setRedeem] = useState(0);
+    const [loading, setLoading] = useState(false);
+
+    const submitDeposit = (value) => {
+
+    };
+    const submitWithdraw = (value) => {
+    };
+    const submitRedeem = (value) => {
+    };
+
+    const handleSubmitClick = (value) => {
+        switch (activeMode) {
+            case ActiveMode.DEPOSIT:
+                submitDeposit(deposit);
+                break;
+            case ActiveMode.WITHDRAW:
+                submitWithdraw(withdraw);
+                break;
+            case ActiveMode.REDEEM:
+                submitRedeem(redeem);
+                break;
+        }
+    }
+
+    const handleRedeemValue = () => {
+        if (userContract?.total_allocated_tokens) {
+            return TokenUtils.formatTokenAmountToHumanReadable(userContract.total_allocated_tokens, tokenInfo.decimals);
+        }
+        return 0;
+    }
     return (
         <>
             <Button
                 variant="contained"
-                onclick={() => { signOut(); }}
+                onClick={() => { signOut(); }}
                 color="error"
                 sx={{ position: 'right' }}
             >
@@ -15,69 +65,76 @@ export default Home = (props) => {
             </Button>
             <Container fixed>
                 <Typography variant="h3">
-                    Welcome to TokenHub
-                    <span data-behavior="account-id"></span>!
+                    Welcome to TokenHub {walletConnection.getAccountId()}!
                 </Typography>
-                <form id="abc"></form>
-                <form id="deposit">
-                    <label
-                        for="deposit"
-                        style="display: block; color: var(--gray); margin-bottom: 0.5em"
-                    >
-                        Deposit: <span data-behavior="my-deposit"></span>
-                    </label>
-                    <div style="display: flex">
-                        <input
-                            style="flex: 1"
-                            autocomplete="off"
-                            id="deposit"
-                            data-behavior="deposit"
-                        />
-                        <button disabled style="border-radius: 0 5px 5px 0">Submit</button>
-                    </div>
-                </form>
 
-                <form id="withdraw">
-                    <label
-                        for="withdraw"
-                        style="display: block; color: var(--gray); margin-bottom: 0.5em"
-                    >
-                        Withdraw:
-                    </label>
-                    <div style="display: flex">
-                        <input
-                            style="flex: 1"
-                            autocomplete="off"
-                            id="withdraw"
-                            data-behavior="withdraw"
-                        />
-                        <button disabled style="border-radius: 0 5px 5px 0">Submit</button>
-                    </div>
-                </form>
+                <FormInput
+                    helperText="Please enter your deposit"
+                    label="Deposite"
+                    defaultValue={nearUtils.format.formatNearAmount(userContract.deposit)}
+                    disabled={userContract.is_redeemed || tokenPeriod != "FINISHED"}
+                    onTextChange={(e) => {
+                        setDeposit(e.target.value);
+                    }}
+                    onButtonClick={() => {
+                        setActiveMode(ActiveMode.DEPOSIT);
+                        setOpenConfirmDialog(true);
+                    }}
+                />
 
-                <form id="redeem">
-                    <div style="display: flex">
-                        <label
-                            for="redeem"
-                            style="display: block; color: var(--gray); margin-bottom: 0.5em"
-                        >
-                            Redeem:
-                        </label>
-                        <!-- <span data-behavior="max-redeemable"></span> -->
-                    </div>
+                <FormInput
+                    helperText="Please enter your withdraw"
+                    label="Withdraw"
+                    disabled={userContract.is_redeemed || tokenPeriod != "FINISHED"}
+                    onTextChange={(e) => {
+                        setWithdraw(e.target.value);
+                    }}
+                    onButtonClick={() => {
+                        setActiveMode(ActiveMode.WITHDRAW);
+                        setOpenConfirmDialog(true);
+                    }}
+                />
 
-                    <div style="display: flex">
-                        <input
-                            style="flex: 1"
-                            autocomplete="off"
-                            id="redeem"
-                            data-behavior="redeem"
-                            disabled
-                        />
-                        <button disabled style="border-radius: 0 5px 5px 0">Submit</button>
-                    </div>
-                </form>
+                <FormInput
+                    helperText="Please enter your redeem"
+                    label="Redeem"
+                    defaultValue={handleRedeemValue()}
+                    disabled={userContract.is_redeemed || tokenPeriod != "FINISHED"}
+                    onTextChange={(e) => {
+                        setRedeem(e.target.value);
+                    }}
+                    onButtonClick={() => {
+                        setActiveMode(ActiveMode.REDEEM);
+                        setOpenConfirmDialog(true);
+                    }}
+                />
             </Container>
+            <Dialog
+                open={openConfirmDialog}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">
+                    {"Confirmation!"}
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                        Are you sure ?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button>Disagree</Button>
+                    <LoadingButton
+                        onClick={handleSubmitClick}
+                        endIcon={<SendIcon />}
+                        loading={loading}
+                        loadingPosition="end"
+                        variant="contained"
+                    />
+                </DialogActions>
+            </Dialog>
         </>
     )
 }
+
+export default Home;

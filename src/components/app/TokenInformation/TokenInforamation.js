@@ -1,18 +1,28 @@
-import { Container } from "@mui/material";
+import React, { useContext, useState } from 'react'
+import { Typography } from "@mui/material";
+import { TokenSalesContext } from "../../../contexts/TokenSalesContext";
+import { TokenUtils } from '../../../helpers/TokenUtils';
+import moment from 'moment';
 
-export default TokenInformation = (props) => {
-    const [symbol, contractName, numberOfTokens, startTime, saleDuration, graceDuration, currentPeriod, totalDeposit, tokenPrice] = props;
+const TokenInformation = (props) => {
+    const {
+        tokenContract
+    } = useContext(TokenSalesContext);
+    const { saleInfo, tokenPeriod, totalDeposit, tokenInfo } = tokenContract;
+    const { symbol, decimals } = tokenInfo;
+
     return (
-        <Container>
-            <p>Token: {symbol}</p>
-            <p>Contract: {contractName}</p>
-            <p>Number of tokens for sale: {numberOfTokens}</p>
-            <p>Start time: {startTime}</p>
-            <p>Sale duration: {saleDuration}</p>
-            <p>Grace duration: {graceDuration}</p>
-            <p>Current period: {currentPeriod}</p>
-            <p>Total deposit: {totalDeposit}</p>
-            <p>Price: {tokenPrice}</p>
-        </Container>
+        <>
+            <Typography variant="h6" component="div">Token: {symbol}</Typography>
+            <Typography variant="h6" component="div">Contract: {saleInfo.ft_contract_name}</Typography>
+            <Typography variant="h6" component="div">Number of tokens for sale: {TokenUtils.formatTokenAmountToHumanReadable(saleInfo.num_of_tokens.toString(), decimals)}</Typography>
+            <Typography variant="h6" component="div">Start time: {new Date(saleInfo.start_time / 1000000).toDateString()}</Typography>
+            <Typography variant="h6" component="div">Sale duration: {moment.duration(saleInfo.sale_duration / 1000000).humanize()}</Typography>
+            <Typography variant="h6" component="div">Grace duration: {moment.duration(saleInfo.grace_duration / 1000000).humanize()}</Typography>
+            <Typography variant="h6" component="div">Current period: {tokenPeriod}</Typography>
+            <Typography variant="h6" component="div">Total deposit: {totalDeposit.formatted_amount}</Typography>
+            <Typography variant="h6" component="div">Price: {totalDeposit.formatted_amount / TokenUtils.formatTokenAmountToHumanReadable(saleInfo.num_of_tokens.toString(), decimals)}</Typography>
+        </>
     );
 }
+export default TokenInformation;

@@ -1,54 +1,49 @@
+import { Container } from '@mui/material';
+import React from 'react';
 import { useContext, useEffect, useState } from "react";
 import Home from "./components/app/Home/Home";
 import Login from "./components/app/Login/Login";
+import TokenInforamation from "./components/app/TokenInformation/TokenInforamation";
 import { TokenSalesContext } from "./contexts/TokenSalesContext";
 
-export default App = (props) => {
-  const {
-    tokenState: {
-      walletConnection,
-      accountId,
-      contract,
-      tokenContract
-    },
-    setTokenState,
-    nearUtils,
-    initContract,
-    initTokenContract,
-    login,
-    logout
-  } = useContext(TokenSalesContext);
+const App = () => {
+    const {
+        tokenState,
+        tokenContract,
+        initContract,
+        fetchUserData,
+        login,
+        logout
+    } = useContext(TokenSalesContext);
 
-  const [isSingedIn, setIsSignedIn] = useContext(false);
+    const [isSingedIn, setIsSignedIn] = useState(false);
 
-  //use hook to store greeting in component state
-  const [greeting, setGreeting] = useState();
+    //after submitting the from, we want to show notification
+    const [showNotification, setShowNotification] = useState();
 
-  //when the user has not yet interacted with the form, disable the button
-  const [buttonDisabled, setButtonDisabled] = useState();
+    // The useEffect hook can be used to fire side-effects during render
+    useEffect(async () => {
+        await initContract();
+    }, []);
 
-  //after submitting the from, we want to show notification
-  const [showNotification, setShowNotification] = useState();
-  
-  const fetchUserData = () => { };
-  const fetchContractStatus = () => { };
+    useEffect(async () => {
+        if (tokenState) {
+            const { walletConnection } = tokenState;
+            if (walletConnection && walletConnection.isSignedIn()) {
+                await fetchUserData();
+                setIsSignedIn(walletConnection.isSignedIn());
+            }
+        }
+    }, [tokenState]);
 
-  // The useEffect hook can be used to fire side-effects during render
-  useEffect(async () => {
-    await initContract();
-    await fetchContractStatus();
-    if (walletConnection?.isSingedIn()) {
-      await fetchUserData();
-      setIsSignedIn(walletConnection.isSingedIn());
-    }
-
-  }, []);
-  useEffect(() => { }, [isSingedIn]);
-
-  return (
-    <Container>
-      {isSingedIn ? <Home logout={logout} /> : <Login login={login} />}
-      {showNotification && <Notification />}
-    </Container>
-  )
+    return (
+        <Container>
+            {!isSingedIn && <Login login={login} />}
+            {isSingedIn && <Home logout={logout} />}
+            {tokenContract != null && <TokenInforamation />}
+            {/* {showNotification && <Notification />} */}
+        </Container>
+    )
 }
+
+export default App;

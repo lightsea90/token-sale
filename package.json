@@ -11,10 +11,11 @@
     "deploy:contract": "near deploy",
     "deploy:pages": "gh-pages -d dist/",
     "deploy": "npm run build && npm run deploy:contract && npm run deploy:pages",
-    "prestart": "npm run build:contract:debug && npm run dev:deploy:contract",
+
     "start": "echo The app is starting! It will automatically open in your browser when ready && env-cmd -f ./neardev/dev-account.env parcel src/index.html --open",
     "dev": "nodemon --watch contract/src -e rs --exec \"npm run start\"",
-    "test": "npm run build:contract:debug && cd contract && cargo test -- --nocapture && cd .. && jest test --runInBand"
+    "test": "npm run build:contract:debug && cd contract && cargo test -- --nocapture && cd .. && jest test --runInBand",
+    "local":"parcel serve src/index.html/parcel serve src/index.html"
   },
   "devDependencies": {
     "@babel/core": "~7.14.0",
@@ -27,15 +28,19 @@
     "jest-environment-node": "~26.6.2",
     "near-cli": "~1.6.0",
     "nodemon": "~2.0.3",
-    "parcel-bundler": "~1.12.4",
+    "parcel-bundler": "^1.9.4",
     "react-test-renderer": "~17.0.1",
     "shelljs": "~0.8.4"
   },
   "dependencies": {
+    "@emotion/react": "^11.5.0",
+    "@emotion/styled": "^11.3.0",
     "@mui/material": "^5.1.0",
+    "@mui/system": "^5.1.0",
+    "@types/react": "^16.8.6 || ^17.0.0",
     "moment": "^2.29.1",
     "near-api-js": "~0.41.0",
-    "react": "~17.0.1",
+    "react": "^17.0.2",
     "react-dom": "~17.0.1",
     "regenerator-runtime": "^0.13.9"
   },
