@@ -16,8 +16,6 @@ const App = () => {
         logout
     } = useContext(TokenSalesContext);
 
-    const [isSingedIn, setIsSignedIn] = useState(false);
-
     //after submitting the from, we want to show notification
     const [showNotification, setShowNotification] = useState();
 
@@ -31,15 +29,13 @@ const App = () => {
             const { walletConnection } = tokenState;
             if (walletConnection && walletConnection.isSignedIn()) {
                 await fetchUserData();
-                setIsSignedIn(walletConnection.isSignedIn());
             }
         }
     }, [tokenState]);
 
     return (
         <Container>
-            {!isSingedIn && <Login login={login} />}
-            {isSingedIn && <Home logout={logout} />}
+            {!(tokenState != null && tokenState.walletConnection.isSignedIn()) ? <Login login={login} /> : <Home logout={logout} />}
             {tokenContract != null && <TokenInforamation />}
             {/* {showNotification && <Notification />} */}
         </Container>

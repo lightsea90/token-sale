@@ -79,6 +79,9 @@ const TokenSalesProvider = (props) => {
                 ],
             }
         );
+        if (contract) {
+            await fetchContractStatus(contract);
+        }
 
         setTokenState({
             walletConnection,
@@ -151,14 +154,14 @@ const TokenSalesProvider = (props) => {
         }
     };
 
-    useEffect(async () => {
-        if (tokenState) {
-            const { contract } = tokenState;
-            if (contract) {
-                await fetchContractStatus(contract);
-            }
-        }
-    }, [tokenState]);
+    // useEffect(async () => {
+    //     if (tokenState) {
+    //         const { contract } = tokenState;
+    //         if (contract) {
+    //             await fetchContractStatus(contract);
+    //         }
+    //     }
+    // }, [tokenState]);
 
     return (
         <TokenSalesContext.Provider

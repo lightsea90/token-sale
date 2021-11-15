@@ -1,5 +1,7 @@
 import React, { useContext, useState } from 'react';
-import { Container, Button, Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, LoadingButton, SendIcon } from "@mui/material";
+import { Container, Button, Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from "@mui/material";
+import LoadingButton from '@mui/lab/LoadingButton';
+import SendIcon from '@mui/icons-material/Send';
 import FormInput from "../../base/FormInput/FormInput";
 import { TokenSalesContext } from '../../../contexts/TokenSalesContext';
 import { TokenUtils } from '../../../helpers/TokenUtils';
@@ -16,7 +18,7 @@ const Home = (props) => {
         userContract,
         nearUtils,
         tokenContract: { tokenInfo, tokenPeriod },
-        tokenState: { walletConnection, contract }
+        tokenState: { walletConnection }
     } = useContext(TokenSalesContext);
     const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
     const [activeMode, setActiveMode] = useState(ActiveMode.WITHDRAW);
@@ -53,6 +55,11 @@ const Home = (props) => {
         }
         return 0;
     }
+
+    const onCloseClick = () =>{
+        setOpenConfirmDialog(false);
+    }
+
     return (
         <>
             <Button
@@ -80,6 +87,7 @@ const Home = (props) => {
                         setActiveMode(ActiveMode.DEPOSIT);
                         setOpenConfirmDialog(true);
                     }}
+                    loading={loading}
                 />
 
                 <FormInput
@@ -93,6 +101,7 @@ const Home = (props) => {
                         setActiveMode(ActiveMode.WITHDRAW);
                         setOpenConfirmDialog(true);
                     }}
+                    loading={loading}
                 />
 
                 <FormInput
@@ -107,6 +116,7 @@ const Home = (props) => {
                         setActiveMode(ActiveMode.REDEEM);
                         setOpenConfirmDialog(true);
                     }}
+                    loading={loading}
                 />
             </Container>
             <Dialog
@@ -123,7 +133,7 @@ const Home = (props) => {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button>Disagree</Button>
+                    <Button onClick={onCloseClick}>Disagree</Button>
                     <LoadingButton
                         onClick={handleSubmitClick}
                         endIcon={<SendIcon />}

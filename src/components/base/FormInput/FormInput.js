@@ -3,7 +3,7 @@ import { Box } from "@mui/system";
 import React, { useState } from "react";
 
 const FormInput = (props) => {
-    const { helperText, label, disabled, defaultValue, onTextChange, onButtonClick } = props;
+    const { helperText, label, disabled, loading, defaultValue, onTextChange, onButtonClick } = props;
     // const buttonSx = {
     //     ...(success && {
     //         bgcolor: green[500],
