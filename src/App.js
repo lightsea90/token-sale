@@ -1,21 +1,20 @@
-import { Container } from '@mui/material';
-import { observe } from 'mobx';
+import { Container, Grid, LinearProgress } from '@mui/material';
 import { observer } from 'mobx-react';
-import React from 'react';
-import { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect } from "react";
 import Home from "./components/app/Home/Home";
 import Login from "./components/app/Login/Login";
-import TokenInforamation from "./components/app/TokenInformation/TokenInforamation";
+import Notification from './components/app/Notification/Notification';
+import TokenInformation from './components/app/TokenInformation/TokenInformation';
 import { TokenSalesContext } from "./contexts/TokenSalesContext";
-import { useTokenStore } from './stores/Token.store';
 
 let App = () => {
     const { tokenStore } = useContext(TokenSalesContext);
 
     const {
         tokenState,
-        tokenContract,
         initContract,
+        isSignedIn,
+        notification
     } = tokenStore;
 
 
@@ -27,16 +26,19 @@ let App = () => {
     }, []);
 
     return (
-        <>
+        <Container>
             {
-                tokenState ?? <Container>
-                    {!tokenState?.walletConnection.isSignedIn() ?? <Login />}
-                    {tokenState?.walletConnection.isSignedIn() ?? <Home />}
-                    {tokenContract != null && <TokenInforamation />}
-                    {/* {showNotification && <Notification />} */}
-                </Container>
+                tokenState ? <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                        {!isSignedIn ? <Login /> : <Home />}
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TokenInformation />
+                    </Grid>
+                    <Notification type={notification.type} message={notification.message} />
+                </Grid> : <LinearProgress />
             }
-        </>
+        </Container>
     )
 }
 App = observer(App);

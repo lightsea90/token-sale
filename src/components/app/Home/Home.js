@@ -7,14 +7,7 @@ import { TokenSalesContext } from '../../../contexts/TokenSalesContext';
 import { TokenUtils } from '../../../helpers/TokenUtils';
 import { observer } from 'mobx-react';
 
-export const ActiveMode = {
-    "DEPOSIT": "DEPOSIT",
-    "WITHDRAW": "WITHDRAW",
-    "REDEEM": "REDEEM"
-}
-
 let Home = (props) => {
-    const { signOut } = props;
     const {
         tokenStore
     } = useContext(TokenSalesContext);
@@ -25,29 +18,22 @@ let Home = (props) => {
         tokenState,
         deposit,
         withdraw,
-        redeem
+        redeem,
+        logout,
+        period
     } = tokenStore;
     const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-    const [activeMode, setActiveMode] = useState(ActiveMode.WITHDRAW);
     const [loading, setLoading] = useState(false);
 
-    const submitDeposit = (value) => {
-
-    };
-    const submitWithdraw = (value) => {
-    };
-    const submitRedeem = (value) => {
-    };
-
     const handleSubmitClick = (value) => {
-        switch (activeMode) {
-            case ActiveMode.DEPOSIT:
+        switch (period) {
+            case "ON_SALE":
                 submitDeposit(deposit);
                 break;
-            case ActiveMode.WITHDRAW:
+            case "ON_GRACE":
                 submitWithdraw(withdraw);
                 break;
-            case ActiveMode.REDEEM:
+            case "FINISHED":
                 submitRedeem(redeem);
                 break;
         }
@@ -66,29 +52,28 @@ let Home = (props) => {
 
     return (
         <>
-            <Button
-                variant="contained"
-                onClick={() => { signOut(); }}
-                color="error"
-                sx={{ position: 'right' }}
-            >
-                Sign out
-            </Button>
             <Container fixed>
-                <Typography variant="h3">
+                <Typography variant="h5">
                     Welcome to TokenHub {tokenState?.walletConnection?.getAccountId()}!
-                </Typography>
+                    <Button
+                        variant="contained"
+                        onClick={() => { logout(); }}
+                        color="error"
+                        sx={{ position: 'right' }}
 
+                    >
+                        Sign out
+                    </Button>
+                </Typography>
                 <FormInput
                     helperText="Please enter your deposit"
-                    label="Deposite"
+                    label="Deposit"
                     defaultValue={nearUtils.format.formatNearAmount(userContract?.deposit || 0)}
-                    disabled={userContract?.is_redeemed || tokenContract?.tokenPeriod != "FINISHED"}
+                    disabled={period !== "ON_SALE"}
                     onTextChange={(e) => {
-                        setDeposit(e.target.value);
+                        deposit = e.target.value;
                     }}
                     onButtonClick={() => {
-                        setActiveMode(ActiveMode.DEPOSIT);
                         setOpenConfirmDialog(true);
                     }}
                     loading={loading}
@@ -97,12 +82,11 @@ let Home = (props) => {
                 <FormInput
                     helperText="Please enter your withdraw"
                     label="Withdraw"
-                    disabled={userContract?.is_redeemed || tokenContract?.tokenPeriod != "FINISHED"}
+                    disabled={period !== "ON_GRACE"}
                     onTextChange={(e) => {
-                        setWithdraw(e.target.value);
+                        withdraw = e.target.value;
                     }}
                     onButtonClick={() => {
-                        setActiveMode(ActiveMode.WITHDRAW);
                         setOpenConfirmDialog(true);
                     }}
                     loading={loading}
@@ -112,12 +96,11 @@ let Home = (props) => {
                     helperText="Please enter your redeem"
                     label="Redeem"
                     defaultValue={handleRedeemValue()}
-                    disabled={userContract?.is_redeemed || tokenContract?.tokenPeriod != "FINISHED"}
+                    disabled={userContract?.is_redeemed == 0 || period !== "FINISHED"}
                     onTextChange={(e) => {
-                        setRedeem(e.target.value);
+                        redeem = e.target.value;
                     }}
                     onButtonClick={() => {
-                        setActiveMode(ActiveMode.REDEEM);
                         setOpenConfirmDialog(true);
                     }}
                     loading={loading}

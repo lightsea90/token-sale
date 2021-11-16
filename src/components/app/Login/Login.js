@@ -1,9 +1,10 @@
 import React, { useContext } from 'react'
-import { Button, Typography } from "@mui/material"
+import { Button, CircularProgress, Typography } from "@mui/material"
 import { Box } from "@mui/system";
 import { useState } from "react";
 import { observer } from 'mobx-react';
 import { TokenSalesContext } from '../../../contexts/TokenSalesContext';
+import { green } from '@mui/material/colors';
 
 let Login = (props) => {
     const { tokenStore } = useContext(TokenSalesContext);
@@ -16,10 +17,10 @@ let Login = (props) => {
     return (
         <>
             <Typography variant="h2" textAlign="center">Welcome to TokenHub!</Typography>
-            <Typography textAlign="center">
+            <Typography variant="h5" textAlign="center">
                 We based on NEAR Protocol. Please sign in by your Near wallet if you want to join us.
             </Typography>
-            <Typography textAlign="center" marginTop="2">
+            <Typography variant="h5" textAlign="center" marginTop="2">
                 <Box sx={{ m: 1, position: 'relative' }}>
                     <Button
                         variant="contained"
