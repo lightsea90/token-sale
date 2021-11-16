@@ -5,6 +5,7 @@ import SendIcon from '@mui/icons-material/Send';
 import FormInput from "../../base/FormInput/FormInput";
 import { TokenSalesContext } from '../../../contexts/TokenSalesContext';
 import { TokenUtils } from '../../../helpers/TokenUtils';
+import { observer } from 'mobx-react';
 
 export const ActiveMode = {
     "DEPOSIT": "DEPOSIT",
@@ -12,19 +13,22 @@ export const ActiveMode = {
     "REDEEM": "REDEEM"
 }
 
-const Home = (props) => {
+let Home = (props) => {
     const { signOut } = props;
+    const {
+        tokenStore
+    } = useContext(TokenSalesContext);
     const {
         userContract,
         nearUtils,
-        tokenContract: { tokenInfo, tokenPeriod },
-        tokenState: { walletConnection }
-    } = useContext(TokenSalesContext);
+        tokenContract,
+        tokenState,
+        deposit,
+        withdraw,
+        redeem
+    } = tokenStore;
     const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
     const [activeMode, setActiveMode] = useState(ActiveMode.WITHDRAW);
-    const [deposit, setDeposit] = useState(0);
-    const [withdraw, setWithdraw] = useState(0);
-    const [redeem, setRedeem] = useState(0);
     const [loading, setLoading] = useState(false);
 
     const submitDeposit = (value) => {
@@ -51,12 +55,12 @@ const Home = (props) => {
 
     const handleRedeemValue = () => {
         if (userContract?.total_allocated_tokens) {
-            return TokenUtils.formatTokenAmountToHumanReadable(userContract.total_allocated_tokens, tokenInfo.decimals);
+            return TokenUtils.formatTokenAmountToHumanReadable(userContract.total_allocated_tokens, tokenContract.tokenInfo.decimals);
         }
         return 0;
     }
 
-    const onCloseClick = () =>{
+    const onCloseClick = () => {
         setOpenConfirmDialog(false);
     }
 
@@ -72,14 +76,14 @@ const Home = (props) => {
             </Button>
             <Container fixed>
                 <Typography variant="h3">
-                    Welcome to TokenHub {walletConnection.getAccountId()}!
+                    Welcome to TokenHub {tokenState?.walletConnection?.getAccountId()}!
                 </Typography>
 
                 <FormInput
                     helperText="Please enter your deposit"
                     label="Deposite"
-                    defaultValue={nearUtils.format.formatNearAmount(userContract.deposit)}
-                    disabled={userContract.is_redeemed || tokenPeriod != "FINISHED"}
+                    defaultValue={nearUtils.format.formatNearAmount(userContract?.deposit || 0)}
+                    disabled={userContract?.is_redeemed || tokenContract?.tokenPeriod != "FINISHED"}
                     onTextChange={(e) => {
                         setDeposit(e.target.value);
                     }}
@@ -93,7 +97,7 @@ const Home = (props) => {
                 <FormInput
                     helperText="Please enter your withdraw"
                     label="Withdraw"
-                    disabled={userContract.is_redeemed || tokenPeriod != "FINISHED"}
+                    disabled={userContract?.is_redeemed || tokenContract?.tokenPeriod != "FINISHED"}
                     onTextChange={(e) => {
                         setWithdraw(e.target.value);
                     }}
@@ -108,7 +112,7 @@ const Home = (props) => {
                     helperText="Please enter your redeem"
                     label="Redeem"
                     defaultValue={handleRedeemValue()}
-                    disabled={userContract.is_redeemed || tokenPeriod != "FINISHED"}
+                    disabled={userContract?.is_redeemed || tokenContract?.tokenPeriod != "FINISHED"}
                     onTextChange={(e) => {
                         setRedeem(e.target.value);
                     }}
@@ -146,5 +150,5 @@ const Home = (props) => {
         </>
     )
 }
-
+Home = observer(Home);
 export default Home;

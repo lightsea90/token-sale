@@ -1,14 +1,16 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import { Button, Typography } from "@mui/material"
 import { Box } from "@mui/system";
 import { useState } from "react";
+import { observer } from 'mobx-react';
+import { TokenSalesContext } from '../../../contexts/TokenSalesContext';
 
-const Login = (props) => {
-    const { login } = props;
+let Login = (props) => {
+    const { tokenStore } = useContext(TokenSalesContext);
     const [loading, setLoading] = useState(false);
     const handleLoginClick = async () => {
         setLoading(true);
-        await login();
+        await tokenStore.login();
         setLoading(false);
     }
     return (
@@ -44,5 +46,5 @@ const Login = (props) => {
         </>
     )
 }
-
+Login = observer(Login);
 export default Login;

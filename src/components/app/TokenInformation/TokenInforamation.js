@@ -3,11 +3,11 @@ import { Typography } from "@mui/material";
 import { TokenSalesContext } from "../../../contexts/TokenSalesContext";
 import { TokenUtils } from '../../../helpers/TokenUtils';
 import moment from 'moment';
+import { observer } from 'mobx-react';
 
-const TokenInformation = (props) => {
-    const {
-        tokenContract
-    } = useContext(TokenSalesContext);
+let TokenInformation = (props) => {
+    const { tokenStore } = useContext(TokenSalesContext);
+    const { tokenContract } = tokenStore;
     const { saleInfo, tokenPeriod, totalDeposit, tokenInfo } = tokenContract;
     const { symbol, decimals } = tokenInfo;
 
@@ -25,4 +25,5 @@ const TokenInformation = (props) => {
         </>
     );
 }
+TokenInformation = observer(TokenInformation);
 export default TokenInformation;

@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { createContext, useReducer, useEffect } from "react";
 import getConfig from "../config";
 import { connect, Contract, keyStores, WalletConnection, utils } from "near-api-js";
+import { TokenStore } from '../stores/Token.store';
 
 // const initTokenState = {
 //     walletConnection: null,
@@ -25,7 +26,7 @@ import { connect, Contract, keyStores, WalletConnection, utils } from "near-api-
 // };
 
 const TokenSalesContext = createContext();
-
+const tokenStore = new TokenStore();
 const TokenSalesProvider = (props) => {
     const [tokenState, setTokenState] = useReducer((state, newState) => {
         return ({ ...state, ...newState });
@@ -38,6 +39,10 @@ const TokenSalesProvider = (props) => {
     const [tokenContract, setTokenContract] = useReducer((state, newState) => {
         return ({ ...state, ...newState });
     }, null);
+
+    const [isSignedIn, setIsSignedIn] = useState(false);
+
+    const [showNotification, setShowNotification] = useState();
 
     const { children } = props;
     const nearConfig = getConfig(process.env.NODE_ENV || 'development');
@@ -56,6 +61,7 @@ const TokenSalesProvider = (props) => {
         // Initializing Wallet based Account. It can work with NEAR testnet wallet that
         // is hosted at https://wallet.testnet.near.org
         const walletConnection = new WalletConnection(near);
+        setIsSignedIn(walletConnection.isSignedIn());
 
         // Getting the Account ID. If still unauthorized, it's just empty string
         const accountId = walletConnection.getAccountId();
@@ -79,19 +85,22 @@ const TokenSalesProvider = (props) => {
                 ],
             }
         );
-        if (contract) {
-            await fetchContractStatus(contract);
-        }
 
         setTokenState({
             walletConnection,
             accountId,
             contract
         });
+
+        if (contract) {
+            await fetchContractStatus(contract, walletConnection);
+        }
+        if (walletConnection.isSignedIn()) {
+            await fetchUserData(contract);
+        }
     };
 
-    const initTokenContract = async (ftContractName) => {
-        const { walletConnection } = tokenState;
+    const initTokenContract = async (ftContractName, walletConnection) => {
         const tokenContract = await new Contract(
             walletConnection.account(),
             ftContractName,
@@ -124,19 +133,18 @@ const TokenSalesProvider = (props) => {
         // window.location.replace(window.location.origin + window.location.pathname);
     };
 
-    const fetchUserData = async () => {
-        const { contract } = tokenState;
+    const fetchUserData = async (contract) => {
         const userSale = await contract.get_user_sale();
         setUserContract(userSale);
     };
 
-    const fetchContractStatus = async (contract) => {
+    const fetchContractStatus = async (contract, walletConnection) => {
         try {
             const result = await Promise.all([contract.get_sale_info(), contract.get_total_deposit(), contract.check_sale_status()]);
             const saleInfo = result[0];
             const totalDeposit = result[1];
             const tokenPeriod = result[2];
-            const tokenContract = await initTokenContract(saleInfo.ft_contract_name);
+            const tokenContract = await initTokenContract(saleInfo.ft_contract_name, walletConnection);
 
             const tokenInfo = await tokenContract.ft_metadata();
             // setTokenInfo(tokenInfo);
@@ -154,31 +162,10 @@ const TokenSalesProvider = (props) => {
         }
     };
 
-    // useEffect(async () => {
-    //     if (tokenState) {
-    //         const { contract } = tokenState;
-    //         if (contract) {
-    //             await fetchContractStatus(contract);
-    //         }
-    //     }
-    // }, [tokenState]);
-
     return (
         <TokenSalesContext.Provider
             value={{
-                tokenState,
-                tokenContract,
-                userContract,
-                nearUtils,
-                setTokenState,
-                setTokenContract,
-                setUserContract,
-                initContract,
-                initTokenContract,
-                fetchContractStatus,
-                fetchUserData,
-                login,
-                logout
+                tokenStore
             }}
         >
             {children}
