@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { Container, Button, Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from "@mui/material";
+import { Container, Button, Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Skeleton, Paper } from "@mui/material";
 import LoadingButton from '@mui/lab/LoadingButton';
 import SendIcon from '@mui/icons-material/Send';
 import FormInput from "../../base/FormInput/FormInput";
@@ -24,6 +24,7 @@ let Home = (props) => {
 
     const handleSubmitClick = async () => {
         loading = true;
+        console.log(period);
         switch (period) {
             case "ON_SALE":
                 await tokenStore.submitDeposit();
@@ -65,48 +66,68 @@ let Home = (props) => {
                         Sign out
                     </Button>
                 </Typography>
-                <FormInput
-                    helperText="Please enter your deposit"
-                    label={`Deposit : ${nearUtils.format.formatNearAmount(userContract?.deposit || 0)}`}
-                    disabled={tokenStore.period !== "ON_SALE"}
-                    buttonDisable={tokenStore.deposit === 0}
-                    onTextChange={(e) => {
-                        tokenStore.deposit = e.target.value;
-                    }}
-                    onButtonClick={() => {
-                        setOpenConfirmDialog(true);
-                    }}
-                    loading={loading}
-                />
+                {
+                    userContract ? <>
+                        <FormInput
+                            helperText="Please enter your deposit"
+                            label={`Deposit : ${nearUtils.format.formatNearAmount(userContract?.deposit || 0)}`}
+                            disabled={!(tokenStore.period == "ON_SALE")}
+                            buttonDisable={tokenStore.deposit === 0}
+                            onTextChange={(e) => {
+                                tokenStore.deposit = e.target.value;
+                            }}
+                            onButtonClick={() => {
+                                setOpenConfirmDialog(true);
+                            }}
+                            loading={loading}
+                        />
 
-                <FormInput
-                    helperText="Please enter your withdraw"
-                    label="Withdraw"
-                    disabled={tokenStore.period !== "ON_GRACE"}
-                    buttonDisable={tokenStore.withdraw === 0}
-                    onTextChange={(e) => {
-                        tokenStore.withdraw = e.target.value;
-                    }}
-                    onButtonClick={() => {
-                        setOpenConfirmDialog(true);
-                    }}
-                    loading={loading}
-                />
+                        <FormInput
+                            helperText="Please enter your withdraw"
+                            label="Withdraw"
+                            disabled={!(tokenStore.period == "ON_SALE" || tokenStore.period == "ON_GRACE")}
+                            buttonDisable={tokenStore.withdraw === 0}
+                            onTextChange={(e) => {
+                                tokenStore.withdraw = e.target.value;
+                            }}
+                            onButtonClick={() => {
+                                setOpenConfirmDialog(true);
+                            }}
+                            loading={loading}
+                        />
 
-                <FormInput
-                    helperText="Please enter your redeem"
-                    label="Redeem"
-                    defaultValue={handleRedeemValue()}
-                    buttonDisable={tokenStore.redeem === 0}
-                    disabled={userContract?.is_redeemed == 0 || tokenStore.period !== "FINISHED"}
-                    onTextChange={(e) => {
-                        tokenStore.redeem = e.target.value;
-                    }}
-                    onButtonClick={() => {
-                        setOpenConfirmDialog(true);
-                    }}
-                    loading={loading}
-                />
+                        <FormInput
+                            helperText="Please enter your redeem"
+                            label="Redeem"
+                            defaultValue={handleRedeemValue()}
+                            buttonDisable={userContract?.is_redeemed == 1 || tokenStore.period !== "FINISHED"}
+                            disabled={userContract?.is_redeemed == 1 || tokenStore.period !== "FINISHED"}
+                            onTextChange={(e) => {
+                                tokenStore.redeem = e.target.value;
+                            }}
+                            onButtonClick={() => {
+                                setOpenConfirmDialog(true);
+                            }}
+                            loading={loading}
+                        />
+                    </> : <>
+                        <Paper
+                            component="div"
+                            sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', marginTop: '10px' }}>
+                            <Typography variant="h2" component="div" sx={{ width: '100%' }}><Skeleton /></Typography>
+                        </Paper>
+                        <Paper
+                            component="div"
+                            sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', marginTop: '10px' }}>
+                            <Typography variant="h2" component="div" sx={{ width: '100%' }}><Skeleton /></Typography>
+                        </Paper>
+                        <Paper
+                            component="div"
+                            sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', marginTop: '10px' }}>
+                            <Typography variant="h2" component="div" sx={{ width: '100%' }}><Skeleton /></Typography>
+                        </Paper>
+                    </>
+                }
             </Container>
             <Dialog
                 open={openConfirmDialog}

@@ -8,7 +8,7 @@ const FormInput = (props) => {
     return (
         <Paper
             component="div"
-            sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: 400 }}>
+            sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', marginTop: '10px' }}>
             <FormControl disabled={disabled} fullWidth sx={{ m: 1 }}>
                 <InputLabel htmlFor={`outlined-adornment-${label}`}>{label}</InputLabel>
                 <OutlinedInput

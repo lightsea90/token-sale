@@ -35,7 +35,7 @@ let App = () => {
                     <Grid item xs={6}>
                         <TokenInformation />
                     </Grid>
-                    <Snackbar open={notification.show} onClose={notification.handleClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+                    <Snackbar open={notification.show} onClose={notification.handleClose} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
                         <Alert severity={notification.type} sx={{ width: '100%' }}>
                             {notification.message}
                         </Alert>

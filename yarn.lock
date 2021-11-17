@@ -2383,6 +2383,13 @@
   resolved "https://registry.npmjs.org/@popperjs/core/-/core-2.10.2.tgz"
   integrity sha512-IXf3XA7+XyN7CP9gGh/XB0UxVMlvARGEgGXLubFICsUMGz6Q+DU+i4gGlpOxTjKvXjkJDJC8YdqdKkDj9qZHEQ==
 
+"@rumess/react-flip-countdown@^1.2.3":
+  version "1.2.3"
+  resolved "https://registry.yarnpkg.com/@rumess/react-flip-countdown/-/react-flip-countdown-1.2.3.tgz#55b0f282cbfe98087813e057c95d688e0425b61a"
+  integrity sha512-DM+ojQlnhOVDy3mCK1ROp7P5i6vMXjsvG5C+IsFAjkSHFAVzgZZlYbP4/xL2hwv0dcKB3HG2F+Ys2cVwt8qg7g==
+  dependencies:
+    moment "^2.26.0"
+
 "@sindresorhus/is@^0.14.0":
   version "0.14.0"
   resolved "https://registry.npmjs.org/@sindresorhus/is/-/is-0.14.0.tgz"
@@ -7945,7 +7952,7 @@ mock-fs@^4.1.0:
   resolved "https://registry.npmjs.org/mock-fs/-/mock-fs-4.14.0.tgz"
   integrity sha512-qYvlv/exQ4+svI3UOvPUpLDF0OMX5euvUH0Ny4N5QyRyhNdgAgUrVH3iUINSzEPLvx0kbo/Bp28GJKIqvE7URw==
 
-moment@^2.29.1:
+moment@^2.26.0, moment@^2.29.1:
   version "2.29.1"
   resolved "https://registry.npmjs.org/moment/-/moment-2.29.1.tgz"
   integrity sha512-kHmoybcPV8Sqy59DwNDY3Jefr64lK/by/da0ViFcuA4DH0vQg5Q6Ze5VimxkfQNSC+Mls/Kx53s7TjP1RhFEDQ==

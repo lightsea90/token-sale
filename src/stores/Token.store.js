@@ -1,4 +1,4 @@
-import { observable, action, makeObservable, computed, makeAutoObservable } from "mobx";
+import { observable, action, makeObservable, computed, makeAutoObservable, when, reaction } from "mobx";
 import { connect, Contract, keyStores, WalletConnection, utils } from "near-api-js";
 import getConfig from "../config";
 import { NotificationType } from "../constants/NotificationType"
@@ -26,6 +26,9 @@ export class TokenStore {
     nearConfig = getConfig(process.env.NODE_ENV || 'development');
     notification = new NotificationObj();
     loading = false;
+    countDownDeposit = 0;
+    countDownWithdrawal = 0;
+    countDownRedeem = 0;
     // period = '';
 
     constructor() {
@@ -41,6 +44,9 @@ export class TokenStore {
             redeem: observable,
             notification: observable,
             loading: observable,
+            countDownDeposit: observable,
+            countDownWithdrawal: observable,
+            countDownRedeem: observable,
 
             initContract: action,
             initTokenContract: action,
@@ -48,12 +54,31 @@ export class TokenStore {
             fetchContractStatus: action,
             login: action,
             logout: action,
+            submitDeposit: action,
+            submitWithdraw: action,
+            submitRedeem: action,
+            getCountDownDeposit: action,
+            getCountDownWithdrawal: action,
+            getCountDownRedeem: action,
 
             period: computed,
-            countDownDeposit: computed,
-            countDownWithdraw: computed,
-            countDownRedeem: computed
+            depositTime: computed,
+            withdrawalTime: computed,
+            depositTime: computed
+            // countDownDeposit: computed,
+            // countDownWithdraw: computed,
+            // countDownRedeem: computed
         });
+        reaction(
+            () => this.tokenContract,
+            (tokenContract) => {
+                this.countDownDeposit = this.getCountDownDeposit(tokenContract);
+                console.log(this.countDownDeposit);
+                this.countDownWithdrawal = this.getCountDownWithdrawal(tokenContract);
+                console.log(this.countDownWithdrawal);
+                this.countDownRedeem = this.getCountDownRedeem(tokenContract);
+                console.log(this.countDownRedeem);
+            });
     }
 
     initContract = async () => {
@@ -170,16 +195,15 @@ export class TokenStore {
     };
 
     submitDeposit = async () => {
-        const { contract } = this.tokenContract;
+        const { contract } = this.tokenState;
         try {
             this.notification = {
-                ...this.notification, ...{
-                    type: NotificationType.INFO,
-                    message: 'Waiting for transaction deposit...',
-                    show: true
-                }
+                type: NotificationType.INFO,
+                message: 'Waiting for transaction deposit...',
+                show: true
             }
             const nearAmount = this.nearUtils.format.parseNearAmount(this.deposit);
+            console.log(nearAmount);
             const res = await contract.deposit({}, this.DEFAULT_GAS, nearAmount);
             this.userContract.deposit += this.deposit;
             console.log(res);
@@ -196,16 +220,15 @@ export class TokenStore {
         }
     };
     submitWithdraw = async () => {
-        const { contract } = this.tokenContract;
+        const { contract } = this.tokenState;
         try {
             this.notification = {
-                ...this.notification, ...{
-                    type: NotificationType.INFO,
-                    message: 'Waiting for transaction withdrawal...',
-                    show: true
-                }
+                type: NotificationType.INFO,
+                message: 'Waiting for transaction withdrawal...',
+                show: true
             }
             const nearAmount = this.nearUtils.format.parseNearAmount(this.withdraw);
+            console.log(nearAmount);
             const res = await contract.withdraw({ amount: nearAmount }, this.DEFAULT_GAS);
             if (res) {
                 this.notification = {
@@ -225,31 +248,28 @@ export class TokenStore {
                 }
             }
         } catch (error) {
+            console.log(error);
             this.notification = {
-                ...this.notification, ...{
-                    type: NotificationType.ERROR,
-                    message: error,
-                    show: true
-                }
+                type: NotificationType.ERROR,
+                message: error.message,
+                show: true
             }
         } finally {
             this.fetchUserData(this.tokenState.contract);
         }
     };
     submitRedeem = async () => {
-        const { contract } = this.tokenContract;
-        const storageDeposit = await this.tokenContract.storage_balance_of({ account_id: this.tokenState.accountId });
-        if (storageDeposit === null) {
-            const storageDeposit = await this.tokenContract.storage_deposit({}, this.DEFAULT_GAS, this.nearUtils.format.parseNearAmount(this.DEFAULT_STORAGE_DEPOSIT.toString()));
-            console.log(storageDeposit);
-        }
         try {
+            const { contract } = this.tokenState;
+            const storageDeposit = await this.tokenContract.storage_balance_of({ account_id: this.tokenState.accountId });
+            if (storageDeposit === null) {
+                const storageDeposit = await this.tokenContract.storage_deposit({}, this.DEFAULT_GAS, this.nearUtils.format.parseNearAmount(this.DEFAULT_STORAGE_DEPOSIT.toString()));
+                console.log(storageDeposit);
+            }
             this.notification = {
-                ...this.notification, ...{
-                    type: NotificationType.INFO,
-                    message: 'Waiting for transaction redeem...',
-                    show: true
-                }
+                type: NotificationType.INFO,
+                message: 'Waiting for transaction redeem...',
+                show: true
             }
             const res = await contract.redeem({}, this.DEFAULT_GAS);
             if (res) {
@@ -270,10 +290,11 @@ export class TokenStore {
                 }
             }
         } catch (error) {
+            console.log(error);
             this.notification = {
                 ...this.notification, ...{
                     type: NotificationType.ERROR,
-                    message: error,
+                    message: error.message,
                     show: true
                 }
             }
@@ -281,6 +302,8 @@ export class TokenStore {
             this.fetchUserData(this.tokenState.contract);
         }
     };
+
+
 
     get period() {
         if (this.tokenContract?.saleInfo?.start_time) {
@@ -300,27 +323,52 @@ export class TokenStore {
         }
         return null;
     }
-    get countDownDeposit() {
+    getCountDownDeposit = (tokenContract) => {
+        if (tokenContract?.saleInfo) {
+            const startTime = tokenContract?.saleInfo?.start_time / 1000000;
+            return (startTime - new Date().getTime()) / 1000;
+        }
+        return -1;
+    }
+    getCountDownWithdrawal = (tokenContract) => {
+        if (tokenContract?.saleInfo) {
+            const startTime = tokenContract.saleInfo.start_time / 1000000;
+            const saleDuration = tokenContract.saleInfo.sale_duration / 1000000;
+            return ((startTime + saleDuration) - new Date().getTime()) / 1000;
+        }
+        return -1;
+    }
+    getCountDownRedeem = (tokenContract) => {
+        if (tokenContract?.saleInfo) {
+            const startTime = tokenContract.saleInfo.start_time / 1000000;
+            const saleDuration = tokenContract.saleInfo.sale_duration / 1000000;
+            const graceDuration = tokenContract.saleInfo.grace_duration / 1000000;
+            return ((startTime + saleDuration + graceDuration) - new Date().getTime()) / 1000;
+        }
+        return -1;
+    }
+
+    get depositTime() {
         if (this.tokenContract?.saleInfo) {
             const startTime = this.tokenContract?.saleInfo?.start_time / 1000000;
-            return moment.duration(startTime - new Date().getTime()).seconds();
+            return moment(startTime).format('YYYY-MM-DD HH:mm:ss');
         }
         return -1;
     }
-    get countDownWithdraw() {
+    get withdrawalTime() {
         if (this.tokenContract?.saleInfo) {
-            const startTime = this.tokenContract.saleInfo.start_time / 1000000;
+            const startTime = this.tokenContract?.saleInfo?.start_time / 1000000;
             const saleDuration = this.tokenContract.saleInfo.sale_duration / 1000000;
-            return moment.duration((startTime + saleDuration) - new Date().getTime()).seconds();
+            return moment(startTime + saleDuration).format('YYYY-MM-DD HH:mm:ss');
         }
         return -1;
     }
-    get countDownRedeem() {
+    get redeemTime() {
         if (this.tokenContract?.saleInfo) {
-            const startTime = this.tokenContract.saleInfo.start_time / 1000000;
+            const startTime = this.tokenContract?.saleInfo?.start_time / 1000000;
             const saleDuration = this.tokenContract.saleInfo.sale_duration / 1000000;
             const graceDuration = this.tokenContract.saleInfo.grace_duration / 1000000;
-            return moment.duration((startTime + saleDuration + graceDuration) - new Date().getTime()).seconds();
+            return moment(startTime + saleDuration + graceDuration).format('YYYY-MM-DD HH:mm:ss');
         }
         return -1;
     }
