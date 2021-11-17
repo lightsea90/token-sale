@@ -11,32 +11,32 @@ let Home = (props) => {
     const {
         tokenStore
     } = useContext(TokenSalesContext);
-    const {
+    let {
         userContract,
         nearUtils,
         tokenContract,
         tokenState,
-        deposit,
-        withdraw,
-        redeem,
         logout,
-        period
+        period,
+        loading
     } = tokenStore;
     const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-    const [loading, setLoading] = useState(false);
 
-    const handleSubmitClick = (value) => {
+    const handleSubmitClick = async () => {
+        loading = true;
         switch (period) {
             case "ON_SALE":
-                submitDeposit(deposit);
+                await tokenStore.submitDeposit();
                 break;
             case "ON_GRACE":
-                submitWithdraw(withdraw);
+                await tokenStore.submitWithdraw();
                 break;
             case "FINISHED":
-                submitRedeem(redeem);
+                await tokenStore.submitRedeem();
                 break;
         }
+        loading = false;
+        setOpenConfirmDialog(false);
     }
 
     const handleRedeemValue = () => {
@@ -67,11 +67,11 @@ let Home = (props) => {
                 </Typography>
                 <FormInput
                     helperText="Please enter your deposit"
-                    label="Deposit"
-                    defaultValue={nearUtils.format.formatNearAmount(userContract?.deposit || 0)}
-                    disabled={period !== "ON_SALE"}
+                    label={`Deposit : ${nearUtils.format.formatNearAmount(userContract?.deposit || 0)}`}
+                    disabled={tokenStore.period !== "ON_SALE"}
+                    buttonDisable={tokenStore.deposit === 0}
                     onTextChange={(e) => {
-                        deposit = e.target.value;
+                        tokenStore.deposit = e.target.value;
                     }}
                     onButtonClick={() => {
                         setOpenConfirmDialog(true);
@@ -82,9 +82,10 @@ let Home = (props) => {
                 <FormInput
                     helperText="Please enter your withdraw"
                     label="Withdraw"
-                    disabled={period !== "ON_GRACE"}
+                    disabled={tokenStore.period !== "ON_GRACE"}
+                    buttonDisable={tokenStore.withdraw === 0}
                     onTextChange={(e) => {
-                        withdraw = e.target.value;
+                        tokenStore.withdraw = e.target.value;
                     }}
                     onButtonClick={() => {
                         setOpenConfirmDialog(true);
@@ -96,9 +97,10 @@ let Home = (props) => {
                     helperText="Please enter your redeem"
                     label="Redeem"
                     defaultValue={handleRedeemValue()}
-                    disabled={userContract?.is_redeemed == 0 || period !== "FINISHED"}
+                    buttonDisable={tokenStore.redeem === 0}
+                    disabled={userContract?.is_redeemed == 0 || tokenStore.period !== "FINISHED"}
                     onTextChange={(e) => {
-                        redeem = e.target.value;
+                        tokenStore.redeem = e.target.value;
                     }}
                     onButtonClick={() => {
                         setOpenConfirmDialog(true);
@@ -120,7 +122,7 @@ let Home = (props) => {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={onCloseClick}>Disagree</Button>
+                    <Button onClick={onCloseClick}>Close</Button>
                     <LoadingButton
                         onClick={handleSubmitClick}
                         endIcon={<SendIcon />}

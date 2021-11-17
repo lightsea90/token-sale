@@ -2,9 +2,9 @@ import { observable, action, makeObservable, computed, makeAutoObservable } from
 import { connect, Contract, keyStores, WalletConnection, utils } from "near-api-js";
 import getConfig from "../config";
 import { NotificationType } from "../constants/NotificationType"
-
+import moment from 'moment';
 export class NotificationObj {
-    type = NotificationType.SUCCESS;
+    type = NotificationType.INFO;
     message = '';
     show = false;
     constructor() {
@@ -25,6 +25,8 @@ export class TokenStore {
     DEFAULT_STORAGE_DEPOSIT = 0.00125;
     nearConfig = getConfig(process.env.NODE_ENV || 'development');
     notification = new NotificationObj();
+    loading = false;
+    // period = '';
 
     constructor() {
         // makeAutoObservable(this);
@@ -38,6 +40,7 @@ export class TokenStore {
             withdraw: observable,
             redeem: observable,
             notification: observable,
+            loading: observable,
 
             initContract: action,
             initTokenContract: action,
@@ -46,7 +49,10 @@ export class TokenStore {
             login: action,
             logout: action,
 
-            period: computed
+            period: computed,
+            countDownDeposit: computed,
+            countDownWithdraw: computed,
+            countDownRedeem: computed
         });
     }
 
@@ -118,7 +124,7 @@ export class TokenStore {
 
     fetchUserData = async (contract) => {
         this.notification = {
-            type: NotificationType.WARNING,
+            type: NotificationType.INFO,
             message: 'Waiting for transaction...',
             show: true
         };
@@ -166,17 +172,115 @@ export class TokenStore {
     submitDeposit = async () => {
         const { contract } = this.tokenContract;
         try {
+            this.notification = {
+                ...this.notification, ...{
+                    type: NotificationType.INFO,
+                    message: 'Waiting for transaction deposit...',
+                    show: true
+                }
+            }
             const nearAmount = this.nearUtils.format.parseNearAmount(this.deposit);
             const res = await contract.deposit({}, this.DEFAULT_GAS, nearAmount);
             this.userContract.deposit += this.deposit;
+            console.log(res);
         } catch (error) {
-
+            this.notification = {
+                ...this.notification, ...{
+                    type: NotificationType.ERROR,
+                    message: error,
+                    show: true
+                }
+            }
         } finally {
-
+            this.fetchUserData(this.tokenState.contract);
         }
     };
-    submitWithdraw = () => { };
-    submitRedeem = () => { };
+    submitWithdraw = async () => {
+        const { contract } = this.tokenContract;
+        try {
+            this.notification = {
+                ...this.notification, ...{
+                    type: NotificationType.INFO,
+                    message: 'Waiting for transaction withdrawal...',
+                    show: true
+                }
+            }
+            const nearAmount = this.nearUtils.format.parseNearAmount(this.withdraw);
+            const res = await contract.withdraw({ amount: nearAmount }, this.DEFAULT_GAS);
+            if (res) {
+                this.notification = {
+                    ...this.notification, ...{
+                        type: NotificationType.SUCCESS,
+                        message: 'Withdrawal SUCCESS',
+                        show: true
+                    }
+                }
+            } else {
+                this.notification = {
+                    ...this.notification, ...{
+                        type: NotificationType.ERROR,
+                        message: 'Withdrawal FAIL',
+                        show: true
+                    }
+                }
+            }
+        } catch (error) {
+            this.notification = {
+                ...this.notification, ...{
+                    type: NotificationType.ERROR,
+                    message: error,
+                    show: true
+                }
+            }
+        } finally {
+            this.fetchUserData(this.tokenState.contract);
+        }
+    };
+    submitRedeem = async () => {
+        const { contract } = this.tokenContract;
+        const storageDeposit = await this.tokenContract.storage_balance_of({ account_id: this.tokenState.accountId });
+        if (storageDeposit === null) {
+            const storageDeposit = await this.tokenContract.storage_deposit({}, this.DEFAULT_GAS, this.nearUtils.format.parseNearAmount(this.DEFAULT_STORAGE_DEPOSIT.toString()));
+            console.log(storageDeposit);
+        }
+        try {
+            this.notification = {
+                ...this.notification, ...{
+                    type: NotificationType.INFO,
+                    message: 'Waiting for transaction redeem...',
+                    show: true
+                }
+            }
+            const res = await contract.redeem({}, this.DEFAULT_GAS);
+            if (res) {
+                this.notification = {
+                    ...this.notification, ...{
+                        type: NotificationType.SUCCESS,
+                        message: 'Redeem SUCCESS',
+                        show: true
+                    }
+                }
+            } else {
+                this.notification = {
+                    ...this.notification, ...{
+                        type: NotificationType.ERROR,
+                        message: 'Redeem FAIL',
+                        show: true
+                    }
+                }
+            }
+        } catch (error) {
+            this.notification = {
+                ...this.notification, ...{
+                    type: NotificationType.ERROR,
+                    message: error,
+                    show: true
+                }
+            }
+        } finally {
+            this.fetchUserData(this.tokenState.contract);
+        }
+    };
 
     get period() {
         if (this.tokenContract?.saleInfo?.start_time) {
@@ -195,6 +299,30 @@ export class TokenStore {
             }
         }
         return null;
+    }
+    get countDownDeposit() {
+        if (this.tokenContract?.saleInfo) {
+            const startTime = this.tokenContract?.saleInfo?.start_time / 1000000;
+            return moment.duration(startTime - new Date().getTime()).seconds();
+        }
+        return -1;
+    }
+    get countDownWithdraw() {
+        if (this.tokenContract?.saleInfo) {
+            const startTime = this.tokenContract.saleInfo.start_time / 1000000;
+            const saleDuration = this.tokenContract.saleInfo.sale_duration / 1000000;
+            return moment.duration((startTime + saleDuration) - new Date().getTime()).seconds();
+        }
+        return -1;
+    }
+    get countDownRedeem() {
+        if (this.tokenContract?.saleInfo) {
+            const startTime = this.tokenContract.saleInfo.start_time / 1000000;
+            const saleDuration = this.tokenContract.saleInfo.sale_duration / 1000000;
+            const graceDuration = this.tokenContract.saleInfo.grace_duration / 1000000;
+            return moment.duration((startTime + saleDuration + graceDuration) - new Date().getTime()).seconds();
+        }
+        return -1;
     }
 
 }
