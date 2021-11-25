@@ -7,6 +7,12 @@ import { TokenSalesContext } from '../../../contexts/TokenSalesContext';
 import { TokenUtils } from '../../../helpers/TokenUtils';
 import { observer } from 'mobx-react';
 
+export const ACTION = {
+    'DEPOSIT': 'DEPOSIT',
+    'WITHDRAWAL': 'WITHDRAWAL',
+    'REDEEM': 'REDEEM'
+}
+
 let Home = (props) => {
     const {
         tokenStore
@@ -21,20 +27,24 @@ let Home = (props) => {
         loading
     } = tokenStore;
     const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+    const [action, setAction] = useState();
 
     const handleSubmitClick = async () => {
         loading = true;
-        console.log(period);
-        switch (period) {
-            case "ON_SALE":
-                await tokenStore.submitDeposit();
-                break;
-            case "ON_GRACE":
-                await tokenStore.submitWithdraw();
-                break;
-            case "FINISHED":
-                await tokenStore.submitRedeem();
-                break;
+        try {
+            switch (action) {
+                case ACTION.DEPOSIT:
+                    await tokenStore.submitDeposit();
+                    break;
+                case ACTION.WITHDRAWAL:
+                    await tokenStore.submitWithdraw();
+                    break;
+                case ACTION.REDEEM:
+                    await tokenStore.submitRedeem();
+                    break;
+            }
+        } catch (error) {
+            console.log(error);
         }
         loading = false;
         setOpenConfirmDialog(false);
@@ -77,6 +87,7 @@ let Home = (props) => {
                                 tokenStore.deposit = e.target.value;
                             }}
                             onButtonClick={() => {
+                                setAction(ACTION.DEPOSIT);
                                 setOpenConfirmDialog(true);
                             }}
                             loading={loading}
@@ -91,6 +102,7 @@ let Home = (props) => {
                                 tokenStore.withdraw = e.target.value;
                             }}
                             onButtonClick={() => {
+                                setAction(ACTION.WITHDRAWAL);
                                 setOpenConfirmDialog(true);
                             }}
                             loading={loading}
@@ -106,6 +118,7 @@ let Home = (props) => {
                                 tokenStore.redeem = e.target.value;
                             }}
                             onButtonClick={() => {
+                                setAction(ACTION.REDEEM);
                                 setOpenConfirmDialog(true);
                             }}
                             loading={loading}

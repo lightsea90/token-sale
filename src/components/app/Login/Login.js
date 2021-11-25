@@ -11,7 +11,11 @@ let Login = (props) => {
     const [loading, setLoading] = useState(false);
     const handleLoginClick = async () => {
         setLoading(true);
-        await tokenStore.login();
+        try {
+            await tokenStore.login();
+        } catch (error) {
+            console.log(error);
+        }
         setLoading(false);
     }
     return (

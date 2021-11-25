@@ -47,39 +47,8 @@ let TokenInformation = (props) => {
         }
     }, [tokenStore.countDownRedeem]);
 
-    // useEffect(() => {
-    //     if (!window.countDownWithdraw && tokenStore.countDownWithdraw > 0) {
-    //         setCountDownWithdraw(tokenStore.countDownWithdraw);
-    //         setTimeout(() => {
-    //             window.countDownWithdraw = setInterval(() => {
-    //                 setCountDownWithdraw(countDownWithdraw - 1);
-    //                 console.log(countDownWithdraw);
-    //                 if (countDownWithdraw <= 0) {
-    //                     clearInterval(window.countDownWithdraw);
-    //                 }
-    //             }, 1000);
-    //         }, 1000);
-    //     }
-    // }, [tokenStore.countDownWithdraw]);
-
-    // useEffect(() => {
-    //     if (!window.countDownRedeem && tokenStore.countDownRedeem > 0) {
-    //         console.log(tokenStore);
-    //         setCountDownRedeem(tokenStore.countDownRedeem);
-    //         setTimeout(() => {
-    //             window.countDownRedeem = setInterval(() => {
-    //                 setCountDownRedeem(countDownRedeem - 1);
-    //                 console.log(countDownRedeem);
-    //                 if (countDownRedeem <= 0) {
-    //                     clearInterval(window.countDownRedeem);
-    //                 }
-    //             }, 1000);
-    //         }, 1000);
-    //     }
-    // }, [tokenStore.countDownRedeem]);
-
     return (
-        tokenContract ?
+        tokenContract?.tokenInfo ?
             (<Container>
                 <Typography variant="h6" component="div">Token: {tokenContract.tokenInfo.symbol}</Typography>
                 <Typography variant="h6" component="div">Contract: {tokenContract.saleInfo.ft_contract_name}</Typography>
