@@ -1,4 +1,5 @@
-import getConfig from "layouts/tokensales/config";
+import { getTokenFactoryConfig } from "layouts/tokensales/config";
+// import { getConfig } from "layouts/tokensales/config";
 import { action, makeObservable, observable } from "mobx";
 import { connect, keyStores, utils, WalletConnection } from "near-api-js";
 
@@ -8,7 +9,7 @@ export class TokenStore {
 
   accountId = null;
 
-  nearConfig = getConfig(process.env.NODE_ENV || "development");
+  nearConfig = getTokenFactoryConfig(process.env.NODE_ENV || "development");
 
   nearUtils = utils;
 

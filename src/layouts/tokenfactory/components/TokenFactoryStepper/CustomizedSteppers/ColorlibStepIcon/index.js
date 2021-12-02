@@ -3,18 +3,24 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import * as React from "react";
 import PropTypes from "prop-types";
-import SettingsIcon from "@mui/icons-material/Settings";
-import GroupAddIcon from "@mui/icons-material/GroupAdd";
-import VideoLabelIcon from "@mui/icons-material/VideoLabel";
+import {
+  AccountTreeOutlined,
+  AddchartOutlined,
+  DoneAllOutlined,
+  HowToRegOutlined,
+  RuleOutlined,
+} from "@mui/icons-material";
 import { ColorlibStepIconRoot } from "./styles";
 
 const ColorlibStepIcon = (props) => {
   const { active, completed, className } = props;
 
   const icons = {
-    1: <SettingsIcon />,
-    2: <GroupAddIcon />,
-    3: <VideoLabelIcon />,
+    1: <HowToRegOutlined />,
+    2: <AccountTreeOutlined />,
+    3: <AddchartOutlined />,
+    4: <RuleOutlined />,
+    5: <DoneAllOutlined />,
   };
 
   return (

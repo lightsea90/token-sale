@@ -6,15 +6,15 @@ import { ColorlibConnector } from "./ColorlibStepIcon/styles";
 const stepsData = ["Select campaign settings", "Create an ad group", "Create an ad"];
 
 const CustomizedSteppers = (props) => {
-  let { steps, activeStep } = props;
-  steps = stepsData;
-  activeStep = 0;
+  const { steps, activeStep } = props;
+  // steps = stepsData;
+  // activeStep = 0;
   return (
     <Stack sx={{ width: "100%" }} spacing={4}>
       <Stepper alternativeLabel activeStep={activeStep} connector={<ColorlibConnector />}>
-        {steps.map((label) => (
-          <Step key={label}>
-            <StepLabel StepIconComponent={ColorlibStepIcon}>{label}</StepLabel>
+        {steps.map((step) => (
+          <Step key={step.key}>
+            <StepLabel StepIconComponent={ColorlibStepIcon}>{step.name}</StepLabel>
           </Step>
         ))}
       </Stepper>

@@ -36,7 +36,7 @@ Coded by www.creative-tim.com
 */
 
 // Soft UI Dashboard React layouts
-import Dashboard from "layouts/dashboard";
+// import Dashboard from "layouts/dashboard";
 // import Tables from "layouts/tables";
 // import Billing from "layouts/billing";
 // import VirtualReality from "layouts/virtual-reality";
@@ -44,7 +44,7 @@ import Dashboard from "layouts/dashboard";
 // import Profile from "layouts/profile";
 // import SignIn from "layouts/authentication/sign-in";
 // import SignUp from "layouts/authentication/sign-up";
-import TokenSales from "layouts/tokensales";
+// import TokenSales from "layouts/tokensales";
 import TokenFactory from "layouts/tokenfactory";
 
 // Soft UI Dashboard React icons
@@ -58,24 +58,24 @@ import Shop from "examples/Icons/Shop";
 // import Cube from "examples/Icons/Cube";
 
 const routes = [
-  {
-    type: "collapse",
-    name: "Dashboard",
-    key: "dashboard",
-    route: "/dashboard",
-    icon: <Shop size="12px" />,
-    component: Dashboard,
-    noCollapse: true,
-  },
-  {
-    type: "collapse",
-    name: "Token Sales",
-    key: "token-sales",
-    route: "/token-sales",
-    icon: <Shop size="12px" />,
-    component: TokenSales,
-    noCollapse: true,
-  },
+  // {
+  //   type: "collapse",
+  //   name: "Dashboard",
+  //   key: "dashboard",
+  //   route: "/dashboard",
+  //   icon: <Shop size="12px" />,
+  //   component: Dashboard,
+  //   noCollapse: true,
+  // },
+  // {
+  //   type: "collapse",
+  //   name: "Token Sales",
+  //   key: "token-sales",
+  //   route: "/token-sales",
+  //   icon: <Shop size="12px" />,
+  //   component: TokenSales,
+  //   noCollapse: true,
+  // },
   {
     type: "collapse",
     name: "Token Factory",

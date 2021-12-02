@@ -5,11 +5,13 @@ import React, { createContext } from "react";
 import { TokenFactoryStore } from "../stores/TokenFactory.store";
 
 const TokenFactoryContext = createContext();
+const tokenFactoryStore = new TokenFactoryStore();
 const TokenFactoryProvider = (props) => {
   const [controller] = useSoftUIController();
   const { tokenStore } = controller;
   const { children } = props;
-  const tokenFactoryStore = new TokenFactoryStore(tokenStore);
+
+  tokenFactoryStore.setTokenStore(tokenStore);
   return (
     <TokenFactoryContext.Provider
       value={{
