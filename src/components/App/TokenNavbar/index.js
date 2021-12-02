@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 
 // react-router components
 import { useLocation } from "react-router-dom";
@@ -26,7 +26,6 @@ import {
 } from "context";
 // Images
 import { observer } from "mobx-react";
-import { TokenSalesContext } from "layouts/tokensales/context/TokenSalesContext";
 import { navbar, navbarContainer, navbarRow, navbarIconButton, navbarMobileMenu } from "./styles";
 // Images
 
@@ -35,8 +34,7 @@ function TokenNavbar({ absolute, light, isMini }) {
   const [controller, dispatch] = useSoftUIController();
   const { miniSidenav, transparentNavbar, fixedNavbar, openConfigurator } = controller;
   const route = useLocation().pathname.split("/").slice(1);
-  const { tokenStore } = useContext(TokenSalesContext);
-  const { tokenState } = tokenStore;
+  const { tokenStore } = controller;
 
   useEffect(() => {
     // Setting the navbar type
@@ -105,9 +103,7 @@ function TokenNavbar({ absolute, light, isMini }) {
                   fontWeight="medium"
                   color={light ? "white" : "dark"}
                 >
-                  {tokenStore?.isSignedIn
-                    ? `Welcome ${tokenState?.walletConnection?.getAccountId()}!`
-                    : " Connect wallet"}
+                  {tokenStore?.isSignedIn ? `Welcome ${tokenStore?.accountId}!` : " Connect wallet"}
                 </SuiTypography>
               </IconButton>
               <IconButton

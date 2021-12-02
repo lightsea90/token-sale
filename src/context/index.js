@@ -1,3 +1,4 @@
+/* eslint-disable import/named */
 /**
 =========================================================
 * Soft UI Dashboard React - v3.0.0
@@ -18,10 +19,13 @@ Coded by www.creative-tim.com
   you can customize the states for the different components here.
 */
 
-import { createContext, useContext, useReducer } from "react";
+import { createContext, useContext, useLayoutEffect, useReducer } from "react";
 
 // prop-types is a library for typechecking of props
 import PropTypes from "prop-types";
+import { TokenStore } from "stores/TokenStore";
+
+const tokenStore = new TokenStore();
 
 // The Soft UI Dashboard PRO Material main context
 const SoftUI = createContext();
@@ -73,9 +77,14 @@ function SoftUIControllerProvider({ children }) {
     openConfigurator: false,
     direction: "ltr",
     layout: "dashboard",
+    tokenStore,
   };
 
   const [controller, dispatch] = useReducer(reducer, initialState);
+
+  useLayoutEffect(async () => {
+    await tokenStore.initWalletConnection();
+  }, []);
 
   return <SoftUI.Provider value={[controller, dispatch]}>{children}</SoftUI.Provider>;
 }

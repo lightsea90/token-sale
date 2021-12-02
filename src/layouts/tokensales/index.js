@@ -1,10 +1,10 @@
+import { observer } from "mobx-react";
 import TokenSalesContainer from "./components/TokenSalesContainer";
 import { TokenSalesProvider } from "./context/TokenSalesContext";
 
-export default function TokenSales() {
-  return (
-    <TokenSalesProvider>
-      <TokenSalesContainer />
-    </TokenSalesProvider>
-  );
-}
+const TokenSales = () => (
+  <TokenSalesProvider>
+    <TokenSalesContainer />
+  </TokenSalesProvider>
+);
+export default observer(TokenSales);

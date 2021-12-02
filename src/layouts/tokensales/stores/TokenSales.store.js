@@ -3,8 +3,7 @@
 /* eslint-disable object-shorthand */
 import { observable, action, makeObservable, computed, makeAutoObservable, reaction } from "mobx";
 import moment from "moment";
-import { connect, Contract, keyStores, WalletConnection, utils } from "near-api-js";
-import getConfig from "../config";
+import { Contract } from "near-api-js";
 import { NotificationType } from "../constants/NotificationType";
 
 export class NotificationObj {
@@ -17,9 +16,7 @@ export class NotificationObj {
 }
 
 export class TokenState {
-  walletConnection = null;
   contract = null;
-  accountId = null;
   constructor() {
     makeAutoObservable(this);
   }
@@ -31,27 +28,29 @@ export class TokenContract {
   saleInfo = null;
   tokenInfo = null;
   constructor() {
-    makeAutoObservable(this);
+    makeObservable(this, {
+      totalDeposit: observable,
+      tokenPeriod: observable,
+      saleInfo: observable,
+      tokenInfo: observable,
+    });
   }
 }
 export class TokenSalesStore {
   tokenState = new TokenState();
   userContract = null;
   tokenContract = new TokenContract();
-  isSignedIn = false;
-  nearUtils = utils;
   deposit = 0;
   withdraw = 0;
   redeem = 0;
   DEFAULT_GAS = 300000000000000;
   DEFAULT_STORAGE_DEPOSIT = 0.00125;
-  nearConfig = getConfig(process.env.NODE_ENV || "development");
   notification = new NotificationObj();
   loading = false;
   countdownStart = 0;
   countdownGrace = 0;
   countdownRedeem = 0;
-  // period = '';
+  tokenStore = null;
 
   constructor() {
     // makeAutoObservable(this);
@@ -59,8 +58,7 @@ export class TokenSalesStore {
       tokenState: observable,
       userContract: observable,
       tokenContract: observable,
-      isSignedIn: observable,
-      nearUtils: observable,
+      // nearUtils: observable,
       deposit: observable,
       withdraw: observable,
       redeem: observable,
@@ -74,8 +72,8 @@ export class TokenSalesStore {
       initTokenContract: action,
       fetchUserData: action,
       fetchContractStatus: action,
-      login: action,
-      logout: action,
+      setTokenStore: action,
+      // logout: action,
       submitDeposit: action,
       submitWithdraw: action,
       submitRedeem: action,
@@ -100,26 +98,16 @@ export class TokenSalesStore {
       }
     );
   }
+  setTokenStore = (tokenStore) => {
+    this.tokenStore = tokenStore;
+  };
 
   initContract = async () => {
     // Initialize connection to the NEAR testnet
     try {
-      const near = await connect({
-        ...{
-          deps: { keyStore: new keyStores.BrowserLocalStorageKeyStore() },
-        },
-        ...this.nearConfig,
-      });
-
-      const walletConnection = new WalletConnection(near, "");
-      console.log(walletConnection);
-      this.isSignedIn = walletConnection.isSignedIn();
-
-      const accountId = walletConnection.getAccountId();
-
       const contract = await new Contract(
-        walletConnection.account(),
-        this.nearConfig.contractName,
+        this.tokenStore.walletConnection.account(),
+        this.tokenStore.nearConfig.contractName,
         {
           viewMethods: ["get_total_deposit", "get_sale_info", "check_sale_status"],
           // Change methods can modify the state. But you don't receive the returned value when called.
@@ -128,15 +116,13 @@ export class TokenSalesStore {
       );
 
       this.tokenState = {
-        walletConnection,
-        accountId,
         contract,
       };
 
       if (contract) {
-        await this.fetchContractStatus(contract, walletConnection);
+        await this.fetchContractStatus(contract);
       }
-      if (walletConnection.isSignedIn()) {
+      if (this.tokenStore.walletConnection.isSignedIn()) {
         await this.fetchUserData(contract);
       }
     } catch (error) {
@@ -144,14 +130,18 @@ export class TokenSalesStore {
     }
   };
 
-  initTokenContract = async (ftContractName, walletConnection) => {
+  initTokenContract = async (ftContractName) => {
     try {
-      const tokenContract = await new Contract(walletConnection.account(), ftContractName, {
-        // View methods are read only. They don't modify the state, but usually return some value.
-        viewMethods: ["ft_metadata", "ft_balance_of", "storage_balance_of"],
-        // Change methods can modify the state. But you don't receive the returned value when called.
-        changeMethods: ["ft_transfer", "storage_deposit"],
-      });
+      const tokenContract = await new Contract(
+        this.tokenStore.walletConnection.account(),
+        ftContractName,
+        {
+          // View methods are read only. They don't modify the state, but usually return some value.
+          viewMethods: ["ft_metadata", "ft_balance_of", "storage_balance_of"],
+          // Change methods can modify the state. But you don't receive the returned value when called.
+          changeMethods: ["ft_transfer", "storage_deposit"],
+        }
+      );
       return tokenContract;
     } catch (error) {
       console.log(error);
@@ -168,7 +158,7 @@ export class TokenSalesStore {
     }
   };
 
-  fetchContractStatus = async (contract, walletConnection) => {
+  fetchContractStatus = async (contract) => {
     try {
       const result = await Promise.all([
         contract.get_sale_info(),
@@ -178,10 +168,7 @@ export class TokenSalesStore {
       const saleInfo = result[0];
       const totalDeposit = result[1];
       const tokenPeriod = result[2];
-      const tokenContract = await this.initTokenContract(
-        saleInfo.ft_contract_name,
-        walletConnection
-      );
+      const tokenContract = await this.initTokenContract(saleInfo.ft_contract_name);
 
       const tokenInfo = await tokenContract.ft_metadata();
       this.tokenContract = {
@@ -193,31 +180,17 @@ export class TokenSalesStore {
           tokenInfo: tokenInfo,
         },
       };
+      console.log(this.tokenContract);
     } catch (error) {
       console.log(error);
     }
-  };
-
-  login = () => {
-    // Allow the current app to make calls to the specified contract on the
-    // user's behalf.
-    // This works by creating a new access key for the user's account and storing
-    // the private key in localStorage.
-    const { walletConnection } = this.tokenState;
-    walletConnection.requestSignIn(this.nearConfig.contractName);
-  };
-
-  logout = () => {
-    const { walletConnection } = this.tokenState;
-    walletConnection.signOut();
-    this.isSignedIn = walletConnection.isSignedIn();
   };
 
   submitDeposit = async () => {
     const { contract } = this.tokenState;
     try {
       this.setNotification("Waiting for transaction deposit...");
-      const nearAmount = this.nearUtils.format.parseNearAmount(this.deposit.toString());
+      const nearAmount = this.tokenStore.nearUtils.format.parseNearAmount(this.deposit.toString());
       // console.log(nearAmount);
       const res = await contract.deposit({}, this.DEFAULT_GAS, nearAmount);
       // this.userContract.deposit += this.deposit;
@@ -237,7 +210,7 @@ export class TokenSalesStore {
         message: "Waiting for transaction withdrawal...",
         show: true,
       };
-      const nearAmount = this.nearUtils.format.parseNearAmount(this.withdraw.toString());
+      const nearAmount = this.tokenStore.nearUtils.format.parseNearAmount(this.withdraw.toString());
       console.log(nearAmount);
       const res = await contract.withdraw({ amount: nearAmount }, this.DEFAULT_GAS);
       if (res) {
@@ -271,13 +244,13 @@ export class TokenSalesStore {
     try {
       const { contract } = this.tokenState;
       let storageDeposit = await this.tokenContract.storage_balance_of({
-        account_id: this.tokenState.accountId,
+        account_id: this.tokenStore.accountId,
       });
       if (storageDeposit === null) {
         storageDeposit = await this.tokenContract.storage_deposit(
           {},
           this.DEFAULT_GAS,
-          this.nearUtils.format.parseNearAmount(this.DEFAULT_STORAGE_DEPOSIT.toString())
+          this.tokenStore.nearUtils.format.parseNearAmount(this.DEFAULT_STORAGE_DEPOSIT.toString())
         );
         console.log(storageDeposit);
       }

@@ -11,11 +11,11 @@ import TokenInfo from "../TokenInfo";
 import TokenSalesForm from "../TokenSalesForm";
 
 const TokenSalesContainer = () => {
-  const { tokenStore } = useContext(TokenSalesContext);
-  const { tokenContract } = tokenStore;
+  const { tokenSalesStore } = useContext(TokenSalesContext);
+  const { tokenContract } = tokenSalesStore;
 
   useEffect(async () => {
-    await tokenStore.initContract();
+    await tokenSalesStore.initContract();
   }, []);
   return (
     <DashboardLayout>

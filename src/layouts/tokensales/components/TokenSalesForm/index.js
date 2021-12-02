@@ -28,9 +28,10 @@ export const ACTION = {
   REDEEM: "REDEEM",
 };
 const TokenSalesForm = () => {
-  const { tokenStore } = useContext(TokenSalesContext);
-  const { userContract, nearUtils, tokenContract } = tokenStore;
-  let { loading } = tokenStore;
+  const { tokenSalesStore } = useContext(TokenSalesContext);
+  const { userContract, tokenContract, tokenStore } = tokenSalesStore;
+  const { nearUtils } = tokenStore;
+  let { loading } = tokenSalesStore;
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [action, setAction] = useState();
 
@@ -39,13 +40,13 @@ const TokenSalesForm = () => {
     try {
       switch (action) {
         case ACTION.DEPOSIT:
-          await tokenStore.submitDeposit();
+          await tokenSalesStore.submitDeposit();
           break;
         case ACTION.WITHDRAWAL:
-          await tokenStore.submitWithdraw();
+          await tokenSalesStore.submitWithdraw();
           break;
         case ACTION.REDEEM:
-          await tokenStore.submitRedeem();
+          await tokenSalesStore.submitRedeem();
           break;
       }
     } catch (error) {
@@ -80,10 +81,10 @@ const TokenSalesForm = () => {
                     label={`Deposit : ${nearUtils.format.formatNearAmount(
                       userContract?.deposit || 0
                     )}`}
-                    disabled={!(tokenStore.period === "ON_SALE")}
-                    buttonDisable={tokenStore.deposit === 0}
+                    disabled={!(tokenSalesStore.period === "ON_SALE")}
+                    buttonDisable={tokenSalesStore.deposit === 0}
                     onTextChange={(e) => {
-                      tokenStore.deposit = e.target.value;
+                      tokenSalesStore.deposit = e.target.value;
                     }}
                     onButtonClick={() => {
                       setAction(ACTION.DEPOSIT);
@@ -96,11 +97,11 @@ const TokenSalesForm = () => {
                     helperText="Please enter your withdraw"
                     label="Withdraw"
                     disabled={
-                      !(tokenStore.period === "ON_SALE" || tokenStore.period === "ON_GRACE")
+                      !(tokenSalesStore.period === "ON_SALE" || tokenSalesStore.period === "ON_GRACE")
                     }
-                    buttonDisable={tokenStore.withdraw === 0}
+                    buttonDisable={tokenSalesStore.withdraw === 0}
                     onTextChange={(e) => {
-                      tokenStore.withdraw = e.target.value;
+                      tokenSalesStore.withdraw = e.target.value;
                     }}
                     onButtonClick={() => {
                       setAction(ACTION.WITHDRAWAL);
@@ -114,11 +115,13 @@ const TokenSalesForm = () => {
                     label="Redeem"
                     defaultValue={handleRedeemValue()}
                     buttonDisable={
-                      userContract?.is_redeemed === 1 || tokenStore.period !== "FINISHED"
+                      userContract?.is_redeemed === 1 || tokenSalesStore.period !== "FINISHED"
                     }
-                    disabled={userContract?.is_redeemed === 1 || tokenStore.period !== "FINISHED"}
+                    disabled={
+                      userContract?.is_redeemed === 1 || tokenSalesStore.period !== "FINISHED"
+                    }
                     onTextChange={(e) => {
-                      tokenStore.redeem = e.target.value;
+                      tokenSalesStore.redeem = e.target.value;
                     }}
                     onButtonClick={() => {
                       setAction(ACTION.REDEEM);

@@ -4,13 +4,18 @@ import SuiBox from "components/SuiBox";
 import { formatTokenAmountToHumanReadable } from "helpers/TokenUltis";
 import { TokenSalesContext } from "layouts/tokensales/context/TokenSalesContext";
 import { observer } from "mobx-react";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import wavesWhite from "assets/images/shapes/waves-white.svg";
 import SuiTypography from "components/SuiTypography";
 
 const TokenInfo = () => {
-  const { tokenStore } = useContext(TokenSalesContext);
-  const { tokenContract } = tokenStore;
+  const { tokenSalesStore } = useContext(TokenSalesContext);
+  const { tokenContract } = tokenSalesStore;
+
+  useEffect(() => {
+    console.log(tokenContract);
+  }, []);
+
   return (
     <>
       {tokenContract?.tokenInfo ? (

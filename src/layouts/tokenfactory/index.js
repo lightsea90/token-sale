@@ -1,7 +1,10 @@
-import { observer } from "mobx-react";
+import TokenFactoryContainer from "./components/TokenFactoryContainer";
+import { TokenFactoryProvider } from "./context/TokenFactoryContext";
 
-function TokenFactory() {
-  return <h1>Token Sales</h1>;
+export default function TokenFactory() {
+  return (
+    <TokenFactoryProvider>
+      <TokenFactoryContainer />
+    </TokenFactoryProvider>
+  );
 }
-
-export default observer(TokenFactory);
