@@ -23,7 +23,7 @@ const CustomizedSteppers = (props) => {
 };
 
 CustomizedSteppers.defaultProps = {
-  steps: [],
+  steps: stepsData,
   activeStep: 0,
 };
 

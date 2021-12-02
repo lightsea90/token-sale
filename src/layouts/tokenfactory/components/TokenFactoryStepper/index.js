@@ -11,7 +11,7 @@ const TokenFactoryStepper = (props) => {
     <Grid container justifyContent="center" alignItems="center">
       <Grid item xs={8}>
         <Card>
-          <CustomizedSteppers steps={steps} />
+          <CustomizedSteppers steps={steps} activeStep={0}/>
         </Card>
       </Grid>
     </Grid>
