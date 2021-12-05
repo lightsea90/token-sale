@@ -48,7 +48,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
   const { miniSidenav, transparentSidenav } = controller;
   const location = useLocation();
   const { pathname } = location;
-  const collapseName = pathname.split("/").slice(1)[0];
+  const collapseName = pathname.split("/").slice(pathname.split("/").length - 1)[0];
 
   const closeSidenav = () => setMiniSidenav(dispatch, true);
 
@@ -71,9 +71,9 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
   }, [dispatch, location]);
 
   // Render all the routes from the routes.js (All the visible items on the Sidenav)
-  const renderRoutes = routes.map(({ type, name, icon, title, noCollapse, key, route, href }) => {
+  const renderRoutes = routes.map((params) => {
     let returnValue;
-
+    const { type, name, icon, title, noCollapse, key, route, href } = params;
     if (type === "collapse") {
       returnValue = href ? (
         <Link
@@ -123,7 +123,6 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
     } else if (type === "divider") {
       returnValue = <Divider key={key} />;
     }
-
     return returnValue;
   });
 

@@ -49,6 +49,7 @@ import TokenFactory from "layouts/tokenfactory";
 
 // Soft UI Dashboard React icons
 import Shop from "examples/Icons/Shop";
+import MyToken from "layouts/tokenfactory/components/MyToken";
 // import Office from "examples/Icons/Office";
 // import Settings from "examples/Icons/Settings";
 // import Document from "examples/Icons/Document";
@@ -76,13 +77,23 @@ const routes = [
   //   component: TokenSales,
   //   noCollapse: true,
   // },
+  { type: "title", title: "Token Factory", key: "token-factory" },
   {
     type: "collapse",
-    name: "Token Factory",
-    key: "token-factory",
-    route: "/token-factory",
+    name: "Create Token",
+    key: "create-token",
+    route: "/token-factory/create-token",
     icon: <Shop size="12px" />,
     component: TokenFactory,
+    noCollapse: true,
+  },
+  {
+    type: "collapse",
+    name: "My Token",
+    key: "my-token",
+    route: "/token-factory/my-token",
+    icon: <Shop size="12px" />,
+    component: MyToken,
     noCollapse: true,
   },
   // {

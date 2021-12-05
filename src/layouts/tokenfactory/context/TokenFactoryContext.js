@@ -12,6 +12,7 @@ const TokenFactoryProvider = (props) => {
   const { children } = props;
 
   tokenFactoryStore.setTokenStore(tokenStore);
+
   return (
     <TokenFactoryContext.Provider
       value={{

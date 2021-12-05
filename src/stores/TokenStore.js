@@ -36,7 +36,7 @@ export class TokenStore {
           deps: { keyStore: new keyStores.BrowserLocalStorageKeyStore() },
         },
         ...this.nearConfig,
-      });
+      });      
 
       this.walletConnection = new WalletConnection(near, "");
       this.isSignedIn = this.walletConnection.isSignedIn();

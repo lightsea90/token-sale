@@ -19,7 +19,7 @@ Coded by www.creative-tim.com
   you can customize the states for the different components here.
 */
 
-import { createContext, useContext, useLayoutEffect, useReducer } from "react";
+import { createContext, useContext, useEffect, useReducer } from "react";
 
 // prop-types is a library for typechecking of props
 import PropTypes from "prop-types";
@@ -73,7 +73,7 @@ function SoftUIControllerProvider({ children }) {
     transparentSidenav: true,
     sidenavColor: "info",
     transparentNavbar: true,
-    fixedNavbar: true,
+    fixedNavbar: false,
     openConfigurator: false,
     direction: "ltr",
     layout: "dashboard",
@@ -82,7 +82,7 @@ function SoftUIControllerProvider({ children }) {
 
   const [controller, dispatch] = useReducer(reducer, initialState);
 
-  useLayoutEffect(async () => {
+  useEffect(async () => {
     await tokenStore.initWalletConnection();
   }, []);
 

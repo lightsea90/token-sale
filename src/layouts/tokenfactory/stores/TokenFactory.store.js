@@ -4,7 +4,11 @@ import Shop from "examples/Icons/Shop";
 // import { getTokenFactoryConfig } from "layouts/tokensales/config";
 import { makeAutoObservable } from "mobx";
 import moment from "moment";
-import { Contract } from "near-api-js";
+import { Contract, providers } from "near-api-js";
+import {
+  LOCAL_STORAGE_CURRENT_TOKEN,
+  LOCAL_STORAGE_REGISTERED_TOKEN,
+} from "../constants/TokenFactory";
 
 export const TOKEN_FACTORY_STEP = {
   REGISTER: "register",
@@ -17,9 +21,9 @@ export const TOKEN_FACTORY_STEP = {
 export class Token {
   // tokenFactoryConfig = getTokenFactoryConfig(process.env.NODE_ENV || "development");
 
-  tokenName = "Token test";
+  tokenName = "";
 
-  symbol = "TESTT";
+  symbol = "";
 
   initialSupply = 1000000000;
 
@@ -31,7 +35,7 @@ export class Token {
 
   vestingStartTime = new Date();
 
-  vestingEndTime = new Date();
+  vestingEndTime = moment().add(30, "day");
 
   vestingInterval = 1;
 
@@ -69,7 +73,9 @@ export class TokenFactoryStore {
     },
   ];
 
-  DEFAULT_GAS = 600000000000000;
+  DEFAULT_GAS = 300000000000000;
+
+  DEFAULT_STORAGE_DEPOSIT = 0.00125;
 
   token = new Token();
 
@@ -77,7 +83,9 @@ export class TokenFactoryStore {
 
   tokenStore;
 
-  contract;
+  registeredTokens = [];
+
+  tokenContract;
 
   constructor() {
     makeAutoObservable(this);
@@ -87,8 +95,15 @@ export class TokenFactoryStore {
     this.tokenStore = tokenStore;
   };
 
+  setRegisteredTokens = (lst) => {
+    this.registeredTokens = [...this.registeredTokens, ...lst];
+  };
+
   initContract = async () => {
     try {
+      if (!this.tokenStore.walletConnection) {
+        await this.tokenStore.initWalletConnection();
+      }
       const contract = await new Contract(
         this.tokenStore.walletConnection.account(),
         this.tokenStore.nearConfig.contractName,
@@ -117,10 +132,12 @@ export class TokenFactoryStore {
   register = async () => {
     this.activeStep = 0;
     console.log(this.contract);
+    localStorage.setItem(LOCAL_STORAGE_CURRENT_TOKEN, JSON.stringify(this.token));
+
     const value = await this.contract.register(
       this.registerParams,
       this.DEFAULT_GAS,
-      this.tokenStore.nearUtils.format.parseNearAmount(4)
+      this.tokenStore.nearUtils.format.parseNearAmount("4")
     );
     console.log("register : ", value);
     return value;
@@ -128,51 +145,132 @@ export class TokenFactoryStore {
 
   createContract = async () => {
     this.activeStep = 1;
-    const value = await this.contract.create_ft_contract(
-      this.registerParams.ft_contract,
-      this.DEFAULT_GAS
-    );
+    const value = await this.contract.create_ft_contract(this.registerParams, this.DEFAULT_GAS);
     console.log("create_ft_contract : ", value);
+    const current = { ...{}, ...this.registerParams };
+    current.create_ft_contract = value;
+    this.saveTokenToLocalStorage(current);
     return value;
   };
 
   createDeployerContract = async () => {
     this.activeStep = 2;
     const value = await this.contract.create_deployer_contract(
-      this.registerParams.ft_contract,
+      this.registerParams,
       this.DEFAULT_GAS
     );
     console.log("create_deployer_contract : ", value);
+    const current = { ...{}, ...this.registerParams };
+    current.create_deployer_contract = value;
+    this.saveTokenToLocalStorage(current);
     return value;
   };
 
   issue = async () => {
     this.activeStep = 3;
-    const value = await this.contract.issue_ft(this.registerParams.ft_contract, this.DEFAULT_GAS);
+    const value = await this.contract.issue_ft(this.registerParams, this.DEFAULT_GAS);
     console.log("issue_ft : ", value);
+    const current = { ...{}, ...this.registerParams };
+    current.issue_ft = value;
+    this.saveTokenToLocalStorage(current);
     return value;
   };
 
   initTokenAllocation = async () => {
     this.activeStep = 4;
-    const value = await this.contract.init_token_allocation(
-      this.registerParams.ft_contract,
-      this.DEFAULT_GAS
-    );
+    const value = await this.contract.init_token_allocation(this.registerParams, this.DEFAULT_GAS);
     console.log("init_token_allocation : ", value);
+    const current = { ...{}, ...this.registerParams };
+    current.init_token_allocation = value;
+    this.saveTokenToLocalStorage(current);
     return value;
   };
 
   getTokenState = async () => {
-    const value = await this.contract.get_token_state(this.registerParams.ft_contract);
+    const value = await this.contract.get_token_state(this.registerParams);
     console.log("get_token_state : ", value);
     return value;
   };
 
+  saveTokenToLocalStorage = (current) => {
+    let registeredTokens = localStorage.getItem(LOCAL_STORAGE_REGISTERED_TOKEN);
+    try {
+      registeredTokens = registeredTokens ? JSON.parse(registeredTokens) : [];
+
+      const tokenIndex = registeredTokens.findIndex((t) => t.symbol === current.symbol);
+
+      if (tokenIndex > -1)
+        registeredTokens[tokenIndex] = { ...registeredTokens[tokenIndex], ...current };
+      else registeredTokens.push(current);
+
+      localStorage.setItem(LOCAL_STORAGE_REGISTERED_TOKEN, JSON.stringify(registeredTokens));
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  initTokenContract = async (ftContractName, viewMethods, changeMethods) => {
+    try {
+      const tokenContract = await new Contract(
+        this.tokenStore.walletConnection.account(),
+        ftContractName,
+        {
+          // View methods are read only. They don't modify the state, but usually return some value.
+          viewMethods,
+          // Change methods can modify the state. But you don't receive the returned value when called.
+          changeMethods,
+        }
+      );
+      return tokenContract;
+    } catch (error) {
+      console.log(error);
+    }
+    return null;
+  };
+
+  claim = async (token) => {
+    const tokenContract = await this.initTokenContract(
+      token.ft_contract,
+      ["ft_metadata", "ft_balance_of", "storage_balance_of"],
+      ["ft_transfer", "storage_deposit"]
+    );
+    const deployerContract = await this.initTokenContract(token.deployer_contract, [], ["claim"]);
+    try {
+      if (tokenContract) {
+        let storageDeposit = await tokenContract.storage_balance_of({
+          account_id: this.tokenStore.accountId,
+        });
+        if (storageDeposit === null) {
+          storageDeposit = await tokenContract.storage_deposit(
+            {},
+            this.DEFAULT_GAS,
+            this.tokenStore.nearUtils.format.parseNearAmount(
+              this.DEFAULT_STORAGE_DEPOSIT.toString()
+            )
+          );
+          console.log(storageDeposit);
+        }
+        const res = await deployerContract.claim({}, this.DEFAULT_GAS);
+        return res;
+      }
+    } catch (error) {
+      console.log("Claim : ", error);
+    }
+    return null;
+  };
+
+  getTransactionStatus = async (txHash) => {
+    const provider = new providers.JsonRpcProvider("https://archival-rpc.testnet.near.org");
+    const res = await provider.txStatus(txHash, this.tokenStore.accountId);
+    console.log(res);
+    return res;
+  };
+
   get registerParams() {
     return {
-      ft_contract: `${this.token.symbol}.token-factory.tokenhub.testnet`,
-      deployer_contract: `${this.token.symbol}-deployer.token-factory.tokenhub.testnet`,
+      ft_contract: `${this.token.symbol}.token-factory.tokenhub.testnet`.toLowerCase(),
+      deployer_contract:
+        `${this.token.symbol}-deployer.token-factory.tokenhub.testnet`.toLowerCase(),
       total_supply: (this.token.initialSupply * 10 ** this.token.decimal).toString(),
       token_name: this.token.tokenName,
       symbol: this.token.symbol,

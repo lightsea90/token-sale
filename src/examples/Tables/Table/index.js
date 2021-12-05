@@ -42,7 +42,7 @@ function Table({ columns, rows }) {
   const { size, fontWeightBold } = typography;
   const { borderWidth } = borders;
 
-  const renderColumns = columns.map(({ name, align, width }, key) => {
+  const renderColumns = columns.map(({ title, name, align, width }, key) => {
     let pl;
     let pr;
 
@@ -73,7 +73,7 @@ function Table({ columns, rows }) {
         opacity={0.7}
         borderBottom={`${borderWidth[1]} solid ${light.main}`}
       >
-        {name.toUpperCase()}
+        {title.toUpperCase()}
       </SuiBox>
     );
   });
