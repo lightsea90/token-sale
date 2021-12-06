@@ -2,7 +2,7 @@
 // eslint-disable-next-line max-classes-per-file
 import Shop from "examples/Icons/Shop";
 // import { getTokenFactoryConfig } from "layouts/tokensales/config";
-import { makeAutoObservable } from "mobx";
+import { action, autorun, computed, makeObservable, observable } from "mobx";
 import moment from "moment";
 import { Contract, providers } from "near-api-js";
 import {
@@ -40,7 +40,17 @@ export class Token {
   vestingInterval = 1;
 
   constructor() {
-    makeAutoObservable(this);
+    makeObservable(this, {
+      tokenName: observable,
+      symbol: observable,
+      initialSupply: observable,
+      decimal: observable,
+      initialRelease: observable,
+      treasury: observable,
+      vestingStartTime: observable,
+      vestingEndTime: observable,
+      vestingInterval: observable,
+    });
   }
 }
 
@@ -77,6 +87,8 @@ export class TokenFactoryStore {
 
   DEFAULT_STORAGE_DEPOSIT = 0.00125;
 
+  DEFAULT_NEAR_AMOUNT = "8";
+
   token = new Token();
 
   activeStep = -1;
@@ -88,7 +100,33 @@ export class TokenFactoryStore {
   tokenContract;
 
   constructor() {
-    makeAutoObservable(this);
+    // makeAutoObservable(this);
+    makeObservable(this, {
+      steps: observable,
+      token: observable,
+      activeStep: observable,
+      registeredTokens: observable,
+      // tokenContract: observable,
+
+      setRegisteredTokens: action,
+      initContract: action,
+      setToken: action,
+      register: action,
+      createContract: action,
+      createDeployerContract: action,
+      issue: action,
+      initTokenAllocation: action,
+      getTokenState: action,
+      appendRegisteredToken: action,
+      // initTokenContract: action,
+      claim: action,
+      getTransactionStatus: action,
+      registerParams: computed,
+    });
+    autorun(() => {
+      console.log("Write local");
+      localStorage.setItem(LOCAL_STORAGE_REGISTERED_TOKEN, JSON.stringify(this.registeredTokens));
+    });
   }
 
   setTokenStore = (tokenStore) => {
@@ -96,7 +134,7 @@ export class TokenFactoryStore {
   };
 
   setRegisteredTokens = (lst) => {
-    this.registeredTokens = [...this.registeredTokens, ...lst];
+    this.registeredTokens = lst;
   };
 
   initContract = async () => {
@@ -137,7 +175,7 @@ export class TokenFactoryStore {
     const value = await this.contract.register(
       this.registerParams,
       this.DEFAULT_GAS,
-      this.tokenStore.nearUtils.format.parseNearAmount("4")
+      this.tokenStore.nearUtils.format.parseNearAmount(this.DEFAULT_NEAR_AMOUNT)
     );
     console.log("register : ", value);
     return value;
@@ -149,7 +187,7 @@ export class TokenFactoryStore {
     console.log("create_ft_contract : ", value);
     const current = { ...{}, ...this.registerParams };
     current.create_ft_contract = value;
-    this.saveTokenToLocalStorage(current);
+    this.appendRegisteredToken(current);
     return value;
   };
 
@@ -162,7 +200,7 @@ export class TokenFactoryStore {
     console.log("create_deployer_contract : ", value);
     const current = { ...{}, ...this.registerParams };
     current.create_deployer_contract = value;
-    this.saveTokenToLocalStorage(current);
+    this.appendRegisteredToken(current);
     return value;
   };
 
@@ -172,7 +210,7 @@ export class TokenFactoryStore {
     console.log("issue_ft : ", value);
     const current = { ...{}, ...this.registerParams };
     current.issue_ft = value;
-    this.saveTokenToLocalStorage(current);
+    this.appendRegisteredToken(current);
     return value;
   };
 
@@ -182,7 +220,10 @@ export class TokenFactoryStore {
     console.log("init_token_allocation : ", value);
     const current = { ...{}, ...this.registerParams };
     current.init_token_allocation = value;
-    this.saveTokenToLocalStorage(current);
+    this.appendRegisteredToken(current);
+    this.activeStep = -1;
+    this.setToken(new Token());
+    this.clearLocalStorageToken();
     return value;
   };
 
@@ -192,21 +233,16 @@ export class TokenFactoryStore {
     return value;
   };
 
-  saveTokenToLocalStorage = (current) => {
-    let registeredTokens = localStorage.getItem(LOCAL_STORAGE_REGISTERED_TOKEN);
-    try {
-      registeredTokens = registeredTokens ? JSON.parse(registeredTokens) : [];
+  appendRegisteredToken = (current) => {
+    const tokenIndex = this.registeredTokens.findIndex((t) => t.symbol === current.symbol);
 
-      const tokenIndex = registeredTokens.findIndex((t) => t.symbol === current.symbol);
+    if (tokenIndex > -1)
+      this.registeredTokens[tokenIndex] = { ...this.registeredTokens[tokenIndex], ...current };
+    else this.registeredTokens.push(current);
+  };
 
-      if (tokenIndex > -1)
-        registeredTokens[tokenIndex] = { ...registeredTokens[tokenIndex], ...current };
-      else registeredTokens.push(current);
-
-      localStorage.setItem(LOCAL_STORAGE_REGISTERED_TOKEN, JSON.stringify(registeredTokens));
-    } catch (error) {
-      console.log(error);
-    }
+  clearLocalStorageToken = () => {
+    localStorage.removeItem(LOCAL_STORAGE_CURRENT_TOKEN);
   };
 
   initTokenContract = async (ftContractName, viewMethods, changeMethods) => {

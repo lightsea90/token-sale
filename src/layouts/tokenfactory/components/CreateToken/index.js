@@ -1,28 +1,25 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
-import { Card, Grid, MenuItem, NativeSelect, Select, Stack, TextField } from "@mui/material";
+import { Card, Grid, MenuItem, Select, TextField } from "@mui/material";
 import SuiBox from "components/SuiBox";
 import SuiButton from "components/SuiButton";
 import SuiInput from "components/SuiInput";
 import SuiTypography from "components/SuiTypography";
 import { TokenFactoryContext } from "layouts/tokenfactory/context/TokenFactoryContext";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useReducer, useState } from "react";
 import { humanize } from "humanize";
 import { DateTimePicker, LocalizationProvider } from "@mui/lab";
 import AdapterDateFns from "@mui/lab/AdapterDateFns";
 import moment from "moment";
-import SuiAlert from "components/SuiAlert";
 import { observer } from "mobx-react";
 
 const CreateToken = (props) => {
+  const { setAlert } = props;
   const { tokenFactoryStore } = useContext(TokenFactoryContext);
   const [vestingStartTime, setVestingStartTime] = useState();
   const [vestingEndTime, setVestingEndTime] = useState(moment().add(30, "days"));
   // eslint-disable-next-line react/destructuring-assignment
   const [loading, setLoading] = useState(props.loading || false);
-  const [alert, setAlert] = useState({});
-  const [initialRelease, setInitialRelease] = useState(tokenFactoryStore.token.initialRelease);
-  const [treasury, setTreasury] = useState(tokenFactoryStore.token.treasury);
   const [totalSupply, setTotalSupply] = useState(tokenFactoryStore.registerParams.total_supply);
 
   useEffect(() => {
@@ -48,12 +45,10 @@ const CreateToken = (props) => {
   };
 
   const handleInitialReleasePercentChange = (e) => {
-    setInitialRelease(e.target.value);
     tokenFactoryStore.setToken({ initialRelease: e.target.value });
   };
 
   const handleTreasuryPercentChange = (e) => {
-    setTreasury(e.target.value);
     tokenFactoryStore.setToken({ treasury: e.target.value });
   };
 
@@ -65,8 +60,8 @@ const CreateToken = (props) => {
     setVestingEndTime(value);
     tokenFactoryStore.setToken({ vestingEndTime: value });
   };
-  const handleVestingIntervalChange = (value) => {
-    tokenFactoryStore.setToken({ vestingInterval: value });
+  const handleVestingIntervalChange = (e) => {
+    tokenFactoryStore.setToken({ vestingInterval: e.target.value });
   };
 
   const handleRegisterToken = async () => {
@@ -106,7 +101,7 @@ const CreateToken = (props) => {
                     type="text"
                     placeholder="Token Name"
                     onChange={handleTokenNameChange}
-                    defaultValue={tokenFactoryStore.token.tokenName}
+                    value={tokenFactoryStore.token.tokenName}
                   />
                 </SuiBox>
                 <SuiBox mb={3}>
@@ -121,7 +116,7 @@ const CreateToken = (props) => {
                     type="text"
                     placeholder="Symbol"
                     onChange={handleSymbolChange}
-                    defaultValue={tokenFactoryStore.token.symbol}
+                    value={tokenFactoryStore.token.symbol}
                   />
                 </SuiBox>
                 <SuiBox mb={2}>
@@ -142,7 +137,8 @@ const CreateToken = (props) => {
                     required
                     type="number"
                     placeholder="Initial Supply"
-                    defaultValue={tokenFactoryStore.token.initialSupply}
+                    value={tokenFactoryStore.token.initialSupply}
+                    // defaultValue={tokenFactoryStore.token.initialSupply}
                     onChange={handleInitialSupplyChange}
                   />
                 </SuiBox>
@@ -152,13 +148,21 @@ const CreateToken = (props) => {
                       Decimals (1-18)
                     </SuiTypography>
                   </SuiBox>
-                  <SuiInput
+                  <Select
+                    disabled={loading}
+                    value={tokenFactoryStore.token.decimal}
+                    onChange={handleDecimalChange}
+                    input={<SuiInput />}
+                  >
+                    <MenuItem value={8}>8</MenuItem>
+                  </Select>
+                  {/* <SuiInput
                     disabled={loading}
                     required
                     type="number"
                     defaultValue={tokenFactoryStore.token.decimal}
                     onChange={handleDecimalChange}
-                  />
+                  /> */}
                 </SuiBox>
               </SuiBox>
             </Grid>
@@ -172,7 +176,7 @@ const CreateToken = (props) => {
                   </SuiBox>
                   <Select
                     disabled={loading}
-                    value={initialRelease}
+                    value={tokenFactoryStore.token.initialRelease}
                     onChange={handleInitialReleasePercentChange}
                     input={<SuiInput />}
                   >
@@ -190,7 +194,7 @@ const CreateToken = (props) => {
                   </SuiBox>
                   <Select
                     disabled={loading}
-                    value={treasury}
+                    value={tokenFactoryStore.token.treasury}
                     onChange={handleTreasuryPercentChange}
                     input={<SuiInput />}
                   >
@@ -247,13 +251,22 @@ const CreateToken = (props) => {
                       Vesting Interval (Days)
                     </SuiTypography>
                   </SuiBox>
-                  <SuiInput
+                  <Select
+                    disabled={loading}
+                    value={tokenFactoryStore.token.vestingInterval}
+                    onChange={handleVestingIntervalChange}
+                    input={<SuiInput />}
+                  >
+                    <MenuItem value={1}>1</MenuItem>
+                    <MenuItem value={7}>7</MenuItem>
+                  </Select>
+                  {/* <SuiInput
                     disabled={loading}
                     required
                     type="number"
                     defaultValue={tokenFactoryStore.token.vestingInterval}
                     onChange={handleVestingIntervalChange}
-                  />
+                  /> */}
                 </SuiBox>
               </SuiBox>
             </Grid>
@@ -261,19 +274,12 @@ const CreateToken = (props) => {
               <SuiButton
                 disabled={loading}
                 variant="gradient"
-                color="info"
+                color="primary"
                 onClick={handleRegisterToken}
               >
                 Create Token
               </SuiButton>
             </SuiBox>
-            {alert.open && (
-              <SuiBox mt={4} mb={1}>
-                <SuiAlert color={alert.color} dismissible>
-                  {alert.message}
-                </SuiAlert>
-              </SuiBox>
-            )}
           </Grid>
         </Card>
       </Grid>

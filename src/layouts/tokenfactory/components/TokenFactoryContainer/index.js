@@ -7,9 +7,11 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import { TokenFactoryContext } from "layouts/tokenfactory/context/TokenFactoryContext";
 // import { TokenFactoryContext } from "layouts/tokenfactory/context/TokenFactoryContext";
 import { observer } from "mobx-react";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useReducer } from "react";
 // import { useContext } from "react";
 import { LOCAL_STORAGE_CURRENT_TOKEN } from "layouts/tokenfactory/constants/TokenFactory";
+import SuiAlert from "components/SuiAlert";
+import { Grid } from "@mui/material";
 import CreateToken from "../CreateToken";
 import TokenFactoryStepper from "../TokenFactoryStepper";
 // import { TokenFactoryContext } from "./context/TokenFactoryContext";
@@ -17,17 +19,31 @@ import TokenFactoryStepper from "../TokenFactoryStepper";
 const TokenFactoryContainer = () => {
   const { tokenFactoryStore } = useContext(TokenFactoryContext);
 
+  const [alert, setAlert] = useReducer((state, newState) => ({ ...state, ...newState }), {
+    open: false,
+    message: "",
+    color: "error",
+  });
+
   useEffect(async () => {
     await tokenFactoryStore.initContract();
-
     let token = localStorage.getItem(LOCAL_STORAGE_CURRENT_TOKEN);
-    if (token) {
+    if (window.location.search && window.location.search.includes("resume_token")) {
+      const searchs = window.location.search.split("&");
+      const resumeToken = searchs.find((s) => s.includes("resume_token")).split("=");
+      const tokenSymbol = resumeToken[resumeToken.length - 1];
+      token = tokenFactoryStore.registeredTokens.find((rt) => rt.symbol === tokenSymbol);
+      tokenFactoryStore.setToken(token);
+    } else if (token) {
       token = JSON.parse(token);
       tokenFactoryStore.setToken(token);
+    }
+
+    if (token) {
       try {
         const tokenState = await tokenFactoryStore.getTokenState();
         if (tokenState) {
-          tokenFactoryStore.saveTokenToLocalStorage(tokenState);
+          tokenFactoryStore.appendRegisteredToken({ ...tokenState, ...token });
           const {
             ft_contract_deployed,
             deployer_contract_deployed,
@@ -45,10 +61,22 @@ const TokenFactoryContainer = () => {
             await tokenFactoryStore.issue();
           }
           if (allocation_initialized === 0) {
-            await tokenFactoryStore.initTokenAllocation();
+            const res = await tokenFactoryStore.initTokenAllocation();
+            if (res) {
+              setAlert({
+                open: true,
+                message: "Create Token Success",
+                color: "success",
+              });
+            }
           }
         }
       } catch (error) {
+        setAlert({
+          open: true,
+          message: error.message,
+          color: "error",
+        });
         console.log(error);
       }
     }
@@ -62,7 +90,18 @@ const TokenFactoryContainer = () => {
           <TokenFactoryStepper />
         </SuiBox>
         <SuiBox mb={3}>
-          <CreateToken />
+          <CreateToken setAlert={setAlert} />
+          {alert.open && (
+            <Grid container justifyContent="center" alignItems="center">
+              <Grid item xs={8}>
+                <SuiBox mt={4} mb={1}>
+                  <SuiAlert color={alert.color} dismissible>
+                    {alert.message}
+                  </SuiAlert>
+                </SuiBox>
+              </Grid>
+            </Grid>
+          )}
         </SuiBox>
       </SuiBox>
     </DashboardLayout>
