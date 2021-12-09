@@ -5,10 +5,7 @@ import Shop from "examples/Icons/Shop";
 import { action, autorun, computed, makeObservable, observable } from "mobx";
 import moment from "moment";
 import { Contract, providers } from "near-api-js";
-import {
-  LOCAL_STORAGE_CURRENT_TOKEN,
-  LOCAL_STORAGE_REGISTERED_TOKEN,
-} from "../constants/TokenFactory";
+import { LOCAL_STORAGE_CURRENT_TOKEN } from "../constants/TokenFactory";
 
 export const TOKEN_FACTORY_STEP = {
   REGISTER: "register",
@@ -118,14 +115,14 @@ export class TokenFactoryStore {
       initTokenAllocation: action,
       getTokenState: action,
       appendRegisteredToken: action,
-      // initTokenContract: action,
+      getDeployerState: action,
       claim: action,
       getTransactionStatus: action,
       registerParams: computed,
     });
+
     autorun(() => {
-      console.log("Write local");
-      localStorage.setItem(LOCAL_STORAGE_REGISTERED_TOKEN, JSON.stringify(this.registeredTokens));
+      this.remapTokenList();
     });
   }
 
@@ -146,7 +143,7 @@ export class TokenFactoryStore {
         this.tokenStore.walletConnection.account(),
         this.tokenStore.nearConfig.contractName,
         {
-          viewMethods: ["get_token_state"],
+          viewMethods: ["get_token_state", "list_my_tokens", "list_all_tokens"],
           // Change methods can modify the state. But you don't receive the returned value when called.
           changeMethods: [
             "register",
@@ -300,6 +297,70 @@ export class TokenFactoryStore {
     const res = await provider.txStatus(txHash, this.tokenStore.accountId);
     console.log(res);
     return res;
+  };
+
+  getListToken = async () => {
+    if (this.tokenStore.accountId) {
+      const value = await this.contract.list_my_tokens({ account_id: this.tokenStore.accountId });
+      console.log("getListToken :", value);
+      this.setRegisteredTokens(value);
+    }
+  };
+
+  getDeployerState = async () => {
+    if (this.registeredTokens) {
+      try {
+        const lstPromises = [];
+        this.registeredTokens.forEach((rt) => {
+          const deployerPromise = async () => {
+            const deployerContract = await this.initTokenContract(
+              rt.deployer_contract,
+              [],
+              ["check_account"]
+            );
+            // eslint-disable-next-line no-debugger
+            try {
+              const contractInfo = await deployerContract.check_account({
+                account_id: this.tokenStore.accountId,
+              });
+
+              return contractInfo;
+            } catch (error) {
+              return null;
+            }
+          };
+          lstPromises.push(deployerPromise());
+        });
+        const result = await Promise.all(lstPromises);
+        // eslint-disable-next-line no-plusplus
+        for (let i = 0; i < this.registeredTokens.length; i++) {
+          this.registeredTokens[i] = { ...this.registeredTokens[i], ...result[i] };
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  remapTokenList = () => {
+    try {
+      this.registeredTokens = this.registeredTokens.map((i) => ({
+        ...i,
+        ...{
+          tokenName: i.token_name,
+          symbol: i.symbol,
+          initialSupply: i.total_supply / 10 ** this.token.decimal,
+          decimal: i.decimals,
+          initialRelease: (i.initial_release / i.initial_supply) * 100,
+          treasury: (i.treasury_allocation / i.initial_supply) * 100,
+          vestingStartTime: moment(i.vesting_start_time / 10 ** 6).format("DD/MM/YYYY hh:mm a"),
+          vestingEndTime: moment(i.vesting_end_time / 10 ** 6).format("DD/MM/YYYY hh:mm a"),
+          vestingInterval: i.vesting_interval / 24 / 3600 / 10 ** 9,
+        },
+      }));
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   get registerParams() {

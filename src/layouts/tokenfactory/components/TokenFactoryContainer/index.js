@@ -26,7 +26,6 @@ const TokenFactoryContainer = () => {
   });
 
   useEffect(async () => {
-    await tokenFactoryStore.initContract();
     let token = localStorage.getItem(LOCAL_STORAGE_CURRENT_TOKEN);
     if (window.location.search && window.location.search.includes("resume_token")) {
       const searchs = window.location.search.split("&");

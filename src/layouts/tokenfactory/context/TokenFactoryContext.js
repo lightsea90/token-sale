@@ -2,7 +2,6 @@
 /* eslint-disable react/prop-types */
 import { useSoftUIController } from "context";
 import React, { createContext, useEffect } from "react";
-import { LOCAL_STORAGE_REGISTERED_TOKEN } from "../constants/TokenFactory";
 import { TokenFactoryStore } from "../stores/TokenFactory.store";
 
 const TokenFactoryContext = createContext();
@@ -13,13 +12,11 @@ const TokenFactoryProvider = (props) => {
   const { children } = props;
 
   tokenFactoryStore.setTokenStore(tokenStore);
-  useEffect(() => {
-    let registeredTokens = localStorage.getItem(LOCAL_STORAGE_REGISTERED_TOKEN);
-    if (registeredTokens) {
-      registeredTokens = JSON.parse(registeredTokens);
-      tokenFactoryStore.setRegisteredTokens(registeredTokens);
-    }
-  }, []);
+  useEffect(async () => {
+    await tokenFactoryStore.initContract();
+    await tokenFactoryStore.getListToken();
+    await tokenFactoryStore.getDeployerState();
+  }, [tokenStore.accountId]);
   return (
     <TokenFactoryContext.Provider
       value={{
