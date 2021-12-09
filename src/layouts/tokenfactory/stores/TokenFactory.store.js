@@ -2,7 +2,7 @@
 // eslint-disable-next-line max-classes-per-file
 import Shop from "examples/Icons/Shop";
 // import { getTokenFactoryConfig } from "layouts/tokensales/config";
-import { action, autorun, computed, makeObservable, observable } from "mobx";
+import { action, computed, makeObservable, observable } from "mobx";
 import moment from "moment";
 import { Contract, providers } from "near-api-js";
 import { LOCAL_STORAGE_CURRENT_TOKEN } from "../constants/TokenFactory";
@@ -35,6 +35,8 @@ export class Token {
   vestingEndTime = moment().add(30, "day");
 
   vestingInterval = 1;
+
+  vestingDuration = 3;
 
   constructor() {
     makeObservable(this, {
@@ -96,6 +98,8 @@ export class TokenFactoryStore {
 
   tokenContract;
 
+  contract = null;
+
   constructor() {
     // makeAutoObservable(this);
     makeObservable(this, {
@@ -103,6 +107,7 @@ export class TokenFactoryStore {
       token: observable,
       activeStep: observable,
       registeredTokens: observable,
+      contract: observable,
       // tokenContract: observable,
 
       setRegisteredTokens: action,
@@ -120,10 +125,6 @@ export class TokenFactoryStore {
       getTransactionStatus: action,
       registerParams: computed,
     });
-
-    autorun(() => {
-      this.remapTokenList();
-    });
   }
 
   setTokenStore = (tokenStore) => {
@@ -132,6 +133,7 @@ export class TokenFactoryStore {
 
   setRegisteredTokens = (lst) => {
     this.registeredTokens = lst;
+    this.remapTokenList();
   };
 
   initContract = async () => {
@@ -168,7 +170,8 @@ export class TokenFactoryStore {
     this.activeStep = 0;
     console.log(this.contract);
     localStorage.setItem(LOCAL_STORAGE_CURRENT_TOKEN, JSON.stringify(this.token));
-
+    // eslint-disable-next-line no-debugger
+    debugger;
     const value = await this.contract.register(
       this.registerParams,
       this.DEFAULT_GAS,
@@ -218,9 +221,9 @@ export class TokenFactoryStore {
     const current = { ...{}, ...this.registerParams };
     current.init_token_allocation = value;
     this.appendRegisteredToken(current);
-    this.activeStep = -1;
     this.setToken(new Token());
     this.clearLocalStorageToken();
+    this.activeStep = -1;
     return value;
   };
 
@@ -267,7 +270,7 @@ export class TokenFactoryStore {
       ["ft_metadata", "ft_balance_of", "storage_balance_of"],
       ["ft_transfer", "storage_deposit"]
     );
-    const deployerContract = await this.initTokenContract(token.deployer_contract, [], ["claim"]);
+    const deployerContract = await this.initTokenContract(token.ft_deployer, [], ["claim"]);
     try {
       if (tokenContract) {
         let storageDeposit = await tokenContract.storage_balance_of({
@@ -303,22 +306,24 @@ export class TokenFactoryStore {
     if (this.tokenStore.accountId) {
       const value = await this.contract.list_my_tokens({ account_id: this.tokenStore.accountId });
       console.log("getListToken :", value);
-      this.setRegisteredTokens(value);
+      return value;
     }
+    return null;
   };
 
-  getDeployerState = async () => {
-    if (this.registeredTokens) {
+  getDeployerState = async (lst) => {
+    const merge = [];
+    if (lst) {
       try {
         const lstPromises = [];
-        this.registeredTokens.forEach((rt) => {
+        lst.forEach((rt) => {
           const deployerPromise = async () => {
             const deployerContract = await this.initTokenContract(
-              rt.deployer_contract,
-              [],
-              ["check_account"]
+              rt.ft_deployer,
+              ["check_account"],
+              []
             );
-            // eslint-disable-next-line no-debugger
+
             try {
               const contractInfo = await deployerContract.check_account({
                 account_id: this.tokenStore.accountId,
@@ -326,20 +331,23 @@ export class TokenFactoryStore {
 
               return contractInfo;
             } catch (error) {
+              console.log(error);
               return null;
             }
           };
           lstPromises.push(deployerPromise());
         });
         const result = await Promise.all(lstPromises);
+        console.log(result);
         // eslint-disable-next-line no-plusplus
-        for (let i = 0; i < this.registeredTokens.length; i++) {
-          this.registeredTokens[i] = { ...this.registeredTokens[i], ...result[i] };
+        for (let i = 0; i < lst.length; i++) {
+          merge.push({ ...lst[i], ...result[i] });
         }
       } catch (error) {
         console.log(error);
       }
     }
+    return merge;
   };
 
   remapTokenList = () => {
@@ -351,11 +359,15 @@ export class TokenFactoryStore {
           symbol: i.symbol,
           initialSupply: i.total_supply / 10 ** this.token.decimal,
           decimal: i.decimals,
-          initialRelease: (i.initial_release / i.initial_supply) * 100,
-          treasury: (i.treasury_allocation / i.initial_supply) * 100,
-          vestingStartTime: moment(i.vesting_start_time / 10 ** 6).format("DD/MM/YYYY hh:mm a"),
-          vestingEndTime: moment(i.vesting_end_time / 10 ** 6).format("DD/MM/YYYY hh:mm a"),
-          vestingInterval: i.vesting_interval / 24 / 3600 / 10 ** 9,
+          initialRelease: (i.initial_release / i.total_supply) * 100,
+          treasury: (i.treasury_allocation / i.total_supply) * 100,
+          vestingStartTime: i.vesting_start_time / 10 ** 6,
+          vestingEndTime: i.vesting_end_time / 10 ** 6,
+          vestingInterval: i.vesting_interval / (24 * 3600 * 10 ** 9),
+          vestingDuration: Math.round(
+            (moment(i.vesting_end_time / 10 ** 6) - moment(i.vesting_start_time / 10 ** 6)) /
+              (10 ** 3 * 24 * 3600)
+          ),
         },
       }));
     } catch (error) {
@@ -383,7 +395,10 @@ export class TokenFactoryStore {
         (this.token.treasury / 100)
       ).toString(),
       vesting_start_time: (moment(this.token.vestingStartTime).unix() * 10 ** 9).toString(),
-      vesting_end_time: (moment(this.token.vestingEndTime).unix() * 10 ** 9).toString(),
+      vesting_end_time: (
+        moment(this.token.vestingStartTime).add(this.token.vestingDuration, "days").unix() *
+        10 ** 9
+      ).toString(),
       vesting_interval: (this.token.vestingInterval * 24 * 3600 * 10 ** 9).toString(),
     };
   }

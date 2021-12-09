@@ -39,38 +39,6 @@ const MyTokenContainer = () => {
     await tokenFactoryStore.claim(e);
   };
 
-  // const handleClaimTransaction = async () => {
-  //   if (window.location.search && window.location.search.includes("transactionHashes")) {
-  //     const search = window.location.search.split("&");
-  //     const transaction = search.find((s) => s.includes("transactionHashes")).split("=");
-  //     const txHash = transaction[transaction.length - 1];
-  //     try {
-  //       const res = await tokenFactoryStore.getTransactionStatus(txHash);
-  //       console.log(res);
-  //       if (res?.status?.SuccessValue) {
-  //         const claimActions = res.transaction.actions.find(
-  //           (i) => i.FunctionCall.method_name === "claim"
-  //         );
-  //         const receiverId = res.transaction.receiver_id;
-  //         if (claimActions && receiverId) {
-  //           const reciever = rows.find((r) => r.ft_deployer === receiverId);
-  //           if (reciever) {
-  //             reciever.claimed = 1;
-  //             setRows([...rows, ...[reciever]]);
-  //           }
-  //         }
-  //       }
-  //     } catch (error) {
-  //       console.log(error);
-  //       setAlert({
-  //         open: true,
-  //         message: error.message,
-  //         color: "error",
-  //       });
-  //     }
-  //   }
-  // };
-
   useEffect(() => {
     try {
       const data = tokenFactoryStore.registeredTokens.map((t) => ({
@@ -79,10 +47,10 @@ const MyTokenContainer = () => {
           total_supply: humanize.numberFormat(t.total_supply / 10 ** t.decimals),
           vesting_start_time: moment(t.vesting_start_time / 10 ** 6).format("DD/MM/YY hh:mm a"),
           vesting_end_time: moment(t.vesting_end_time / 10 ** 6).format("DD/MM/YY hh:mm a"),
-          vesting_interval: t.vesting_interval / (24 * 3600 * 10 ** 9),
+          vesting_interval: Math.round(t.vesting_interval / (24 * 3600 * 10 ** 9)),
           action: (
             <SuiBox ml={-1.325}>
-              {!t.init_token_allocation ? (
+              {!t.allocation_initialized && (
                 <SuiButton
                   variant="gradient"
                   color="warning"
@@ -91,12 +59,17 @@ const MyTokenContainer = () => {
                 >
                   <AutorenewOutlined sx={{ marginRight: 1 }} /> Resume
                 </SuiButton>
-              ) : (
+              )}
+              {t.allocation_initialized && parseInt(t.claimable_amount, 10) > 0 && (
                 <SuiButton variant="gradient" color="primary" onClick={() => handleClaim(t)}>
                   <CheckCircleOutlined sx={{ marginRight: 1 }} /> Claim
                 </SuiButton>
               )}
-              {t.claimed && <CheckCircleOutlined />}
+              {t.allocation_initialized && parseInt(t.claimable_amount, 10) === 0 && (
+                <SuiButton disabled variant="gradient" color="success">
+                  <CheckCircleOutlined sx={{ marginRight: 1 }} />
+                </SuiButton>
+              )}
             </SuiBox>
           ),
         },
@@ -110,13 +83,7 @@ const MyTokenContainer = () => {
       });
       console.log(error);
     }
-  }, []);
-
-  // useEffect(async () => {
-  //   if (tokenStore.accountId) {
-  //     await handleClaimTransaction();
-  //   }
-  // }, [tokenStore.accountId]);
+  }, [tokenFactoryStore.registeredTokens]);
 
   return (
     <DashboardLayout>

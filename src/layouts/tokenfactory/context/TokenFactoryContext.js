@@ -14,8 +14,11 @@ const TokenFactoryProvider = (props) => {
   tokenFactoryStore.setTokenStore(tokenStore);
   useEffect(async () => {
     await tokenFactoryStore.initContract();
-    await tokenFactoryStore.getListToken();
-    await tokenFactoryStore.getDeployerState();
+    const lst = await tokenFactoryStore.getListToken();
+    if (lst) {
+      const mergeLst = await tokenFactoryStore.getDeployerState(lst);
+      tokenFactoryStore.setRegisteredTokens(mergeLst);
+    }
   }, [tokenStore.accountId]);
   return (
     <TokenFactoryContext.Provider

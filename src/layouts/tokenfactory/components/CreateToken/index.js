@@ -23,7 +23,7 @@ const CreateToken = (props) => {
   const [totalSupply, setTotalSupply] = useState(tokenFactoryStore.registerParams.total_supply);
 
   useEffect(() => {
-    setLoading(tokenFactoryStore.activeStep > -1 && tokenFactoryStore.activeStep < 4);
+    setLoading(tokenFactoryStore.activeStep > -1 && tokenFactoryStore.activeStep <= 4);
   }, [tokenFactoryStore.activeStep]);
 
   const handleTokenNameChange = (e) => {
@@ -56,10 +56,19 @@ const CreateToken = (props) => {
     setVestingStartTime(value);
     tokenFactoryStore.setToken({ vestingStartTime: value });
   };
-  const handleVestingEndTimeChange = (value) => {
-    setVestingEndTime(value);
-    tokenFactoryStore.setToken({ vestingEndTime: value });
+
+  // const handleVestingEndTimeChange = (value) => {
+  //   setVestingEndTime(value);
+  //   tokenFactoryStore.setToken({ vestingEndTime: value });
+  // };
+
+  const handleVestingDurationChange = (e) => {
+    setVestingEndTime(
+      moment(vestingStartTime).add(e.target.value, "days").format("DD/MM/YY hh:mm a")
+    );
+    tokenFactoryStore.setToken({ vestingDuration: e.target.value });
   };
+
   const handleVestingIntervalChange = (e) => {
     tokenFactoryStore.setToken({ vestingInterval: e.target.value });
   };
@@ -221,7 +230,7 @@ const CreateToken = (props) => {
                       </LocalizationProvider>
                     </SuiBox>
                   </Grid>
-                  <Grid item xs={6}>
+                  {/* <Grid item xs={6}>
                     <SuiBox mb={2}>
                       <SuiBox mb={1} ml={0.5}>
                         <SuiTypography component="label" variant="caption" fontWeight="bold">
@@ -236,6 +245,26 @@ const CreateToken = (props) => {
                           value={vestingEndTime}
                         />
                       </LocalizationProvider>
+                    </SuiBox>
+                  </Grid> */}
+                  <Grid item xs={6}>
+                    <SuiBox mb={2}>
+                      <SuiBox mb={1} ml={0.5}>
+                        <SuiTypography component="label" variant="caption" fontWeight="bold">
+                          Vesting Duration (days)
+                        </SuiTypography>
+                      </SuiBox>
+                      <Select
+                        disabled={loading}
+                        value={tokenFactoryStore.token.vestingDuration}
+                        onChange={handleVestingDurationChange}
+                        input={<SuiInput />}
+                      >
+                        <MenuItem value={1}>1</MenuItem>
+                        <MenuItem value={3}>3</MenuItem>
+                        <MenuItem value={7}>7</MenuItem>
+                        <MenuItem value={30}>30</MenuItem>
+                      </Select>
                     </SuiBox>
                   </Grid>
                 </Grid>

@@ -26,60 +26,82 @@ const TokenFactoryContainer = () => {
   });
 
   useEffect(async () => {
-    let token = localStorage.getItem(LOCAL_STORAGE_CURRENT_TOKEN);
-    if (window.location.search && window.location.search.includes("resume_token")) {
-      const searchs = window.location.search.split("&");
-      const resumeToken = searchs.find((s) => s.includes("resume_token")).split("=");
-      const tokenSymbol = resumeToken[resumeToken.length - 1];
-      token = tokenFactoryStore.registeredTokens.find((rt) => rt.symbol === tokenSymbol);
-      tokenFactoryStore.setToken(token);
-    } else if (token) {
-      token = JSON.parse(token);
-      tokenFactoryStore.setToken(token);
-    }
+    if (tokenFactoryStore.contract) {
+      let token = localStorage.getItem(LOCAL_STORAGE_CURRENT_TOKEN);
+      if (window.location.search && window.location.search.includes("resume_token")) {
+        const searchs = window.location.search.split("&");
+        const resumeToken = searchs.find((s) => s.includes("resume_token")).split("=");
+        const tokenSymbol = resumeToken[resumeToken.length - 1];
+        token = tokenFactoryStore.registeredTokens.find((rt) => rt.symbol === tokenSymbol);
+        tokenFactoryStore.setToken(token);
+      } else if (token) {
+        token = JSON.parse(token);
+        tokenFactoryStore.setToken(token);
+      }
 
-    if (token) {
-      try {
-        const tokenState = await tokenFactoryStore.getTokenState();
-        if (tokenState) {
-          tokenFactoryStore.appendRegisteredToken({ ...tokenState, ...token });
-          const {
-            ft_contract_deployed,
-            deployer_contract_deployed,
-            ft_issued,
-            allocation_initialized,
-          } = tokenState;
+      if (token) {
+        try {
+          const tokenState = await tokenFactoryStore.getTokenState();
+          if (tokenState) {
+            tokenFactoryStore.appendRegisteredToken({ ...tokenState, ...token });
+            const {
+              ft_contract_deployed,
+              deployer_contract_deployed,
+              ft_issued,
+              allocation_initialized,
+            } = tokenState;
 
-          if (ft_contract_deployed === 0) {
-            await tokenFactoryStore.createContract();
-          }
-          if (deployer_contract_deployed === 0) {
-            await tokenFactoryStore.createDeployerContract();
-          }
-          if (ft_issued === 0) {
-            await tokenFactoryStore.issue();
-          }
-          if (allocation_initialized === 0) {
-            const res = await tokenFactoryStore.initTokenAllocation();
-            if (res) {
+            if (ft_contract_deployed === 0) {
               setAlert({
                 open: true,
-                message: "Create Token Success",
-                color: "success",
+                message: "Creating contract ...",
+                color: "primary",
               });
+              await tokenFactoryStore.createContract();
+            }
+            if (deployer_contract_deployed === 0) {
+              setAlert({
+                open: true,
+                message: "Creating deployer contract ...",
+                color: "primary",
+              });
+              await tokenFactoryStore.createDeployerContract();
+            }
+            if (ft_issued === 0) {
+              setAlert({
+                open: true,
+                message: "Issuing ...",
+                color: "primary",
+              });
+              await tokenFactoryStore.issue();
+            }
+            if (allocation_initialized === 0) {
+              setAlert({
+                open: true,
+                message: "Initiating token allocation ...",
+                color: "primary",
+              });
+              const res = await tokenFactoryStore.initTokenAllocation();
+              if (res) {
+                setAlert({
+                  open: true,
+                  message: "Create Token Success",
+                  color: "success",
+                });
+              }
             }
           }
+        } catch (error) {
+          setAlert({
+            open: true,
+            message: error.message,
+            color: "error",
+          });
+          console.log(error);
         }
-      } catch (error) {
-        setAlert({
-          open: true,
-          message: error.message,
-          color: "error",
-        });
-        console.log(error);
       }
     }
-  }, []);
+  }, [tokenFactoryStore.contract]);
 
   return (
     <DashboardLayout>
