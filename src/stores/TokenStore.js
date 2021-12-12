@@ -9,7 +9,7 @@ export class TokenStore {
 
   accountId = null;
 
-  nearConfig = getTokenFactoryConfig(process.env.NODE_ENV || "development");
+  nearConfig = getTokenFactoryConfig(process.env.REACT_APP_NODE_ENV || "development");
 
   nearUtils = utils;
 
