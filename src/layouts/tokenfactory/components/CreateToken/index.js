@@ -8,10 +8,11 @@ import SuiTypography from "components/SuiTypography";
 import { TokenFactoryContext } from "layouts/tokenfactory/context/TokenFactoryContext";
 import { useContext, useEffect, useReducer, useState } from "react";
 import { humanize } from "humanize";
-import { DateTimePicker, LocalizationProvider } from "@mui/lab";
+import { DateTimePicker, LoadingButton, LocalizationProvider } from "@mui/lab";
 import AdapterDateFns from "@mui/lab/AdapterDateFns";
 import moment from "moment";
 import { observer } from "mobx-react";
+import { BackupOutlined } from "@mui/icons-material";
 
 const CreateToken = (props) => {
   const { setAlert } = props;
@@ -21,10 +22,40 @@ const CreateToken = (props) => {
   // eslint-disable-next-line react/destructuring-assignment
   const [loading, setLoading] = useState(props.loading || false);
   const [totalSupply, setTotalSupply] = useState(tokenFactoryStore.registerParams.total_supply);
+  const [tokenValidation, setTokenValidation] = useState(false);
+
+  const checkTokenValidation = async () => {
+    let isValid = true;
+    if (!tokenFactoryStore.token.tokenName || !tokenFactoryStore.token.symbol) {
+      isValid = false;
+      return isValid;
+    }
+    try {
+      await tokenFactoryStore.checkExistenceToken(tokenFactoryStore.registerParams.ft_contract);
+      await tokenFactoryStore.checkExistenceToken(
+        tokenFactoryStore.registerParams.deployer_contract
+      );
+    } catch (error) {
+      console.log(error);
+      if (error?.type !== "AccountDoesNotExist") {
+        isValid = false;
+      }
+    }
+
+    return isValid;
+  };
 
   useEffect(() => {
     setLoading(tokenFactoryStore.activeStep > -1 && tokenFactoryStore.activeStep <= 4);
   }, [tokenFactoryStore.activeStep]);
+
+  useEffect(() => {
+    if (window.delayCheckTokenValidation) clearTimeout(window.delayCheckTokenValidation);
+    window.delayCheckTokenValidation = setTimeout(async () => {
+      const res = await checkTokenValidation();
+      setTokenValidation(res);
+    }, 500);
+  }, [tokenFactoryStore.token.symbol, tokenFactoryStore.token.tokenName]);
 
   const handleTokenNameChange = (e) => {
     tokenFactoryStore.setToken({ tokenName: e.target.value });
@@ -132,7 +163,7 @@ const CreateToken = (props) => {
                   <SuiBox mb={1} ml={0.5}>
                     <Grid container direction="row" justifyContent="space-between">
                       <SuiTypography component="label" variant="caption" fontWeight="bold" mb={1}>
-                        Initial Supply
+                        Total Supply
                       </SuiTypography>
                       <SuiTypography component="label" variant="caption" align="right" color="red">
                         ~ {humanize.numberFormat(totalSupply)}
@@ -141,7 +172,15 @@ const CreateToken = (props) => {
                       <Grid item xs={6} alignContent="end" alignItems="end"></Grid> */}
                     </Grid>
                   </SuiBox>
-                  <SuiInput
+                  <Select
+                    disabled={loading}
+                    value={tokenFactoryStore.token.initialSupply}
+                    onChange={handleInitialSupplyChange}
+                    input={<SuiInput />}
+                  >
+                    <MenuItem value={100000000}>{humanize.numberFormat(100000000)}</MenuItem>
+                  </Select>
+                  {/* <SuiInput
                     disabled={loading}
                     required
                     type="number"
@@ -149,7 +188,7 @@ const CreateToken = (props) => {
                     value={tokenFactoryStore.token.initialSupply}
                     // defaultValue={tokenFactoryStore.token.initialSupply}
                     onChange={handleInitialSupplyChange}
-                  />
+                  /> */}
                 </SuiBox>
                 <SuiBox mb={2}>
                   <SuiBox mb={1} ml={0.5}>
@@ -260,10 +299,10 @@ const CreateToken = (props) => {
                         onChange={handleVestingDurationChange}
                         input={<SuiInput />}
                       >
-                        <MenuItem value={1}>1</MenuItem>
-                        <MenuItem value={3}>3</MenuItem>
-                        <MenuItem value={7}>7</MenuItem>
-                        <MenuItem value={30}>30</MenuItem>
+                        {/* <MenuItem value={1}>1</MenuItem> */}
+                        <MenuItem value={4}>4</MenuItem>
+                        {/* <MenuItem value={7}>7</MenuItem>
+                        <MenuItem value={30}>30</MenuItem> */}
                       </Select>
                     </SuiBox>
                   </Grid>
@@ -287,7 +326,7 @@ const CreateToken = (props) => {
                     input={<SuiInput />}
                   >
                     <MenuItem value={1}>1</MenuItem>
-                    <MenuItem value={7}>7</MenuItem>
+                    {/* <MenuItem value={7}>7</MenuItem> */}
                   </Select>
                   {/* <SuiInput
                     disabled={loading}
@@ -300,14 +339,28 @@ const CreateToken = (props) => {
               </SuiBox>
             </Grid>
             <SuiBox mt={4} mb={1}>
-              <SuiButton
-                disabled={loading}
+              {/* <SuiButton
+                disabled={loading || !tokenFactoryStore.tokenValidation}
                 variant="gradient"
                 color="primary"
                 onClick={handleRegisterToken}
               >
                 Create Token
-              </SuiButton>
+              </SuiButton> */}
+              <LoadingButton
+                disabled={loading || !tokenValidation}
+                sx={{
+                  background: "linear-gradient(to right, #da4453, #89216b);",
+                  color: "#fff",
+                }}
+                onClick={handleRegisterToken}
+                loading={loading}
+                loadingPosition="start"
+                startIcon={<BackupOutlined color="#fff" fontSize="large" />}
+                variant="contained"
+              >
+                Create Token
+              </LoadingButton>
             </SuiBox>
           </Grid>
         </Card>

@@ -9,9 +9,10 @@ import { TokenFactoryContext } from "layouts/tokenfactory/context/TokenFactoryCo
 import { observer } from "mobx-react";
 import { useContext, useEffect, useReducer } from "react";
 // import { useContext } from "react";
-import { LOCAL_STORAGE_CURRENT_TOKEN } from "layouts/tokenfactory/constants/TokenFactory";
+// import { LOCAL_STORAGE_CURRENT_TOKEN } from "layouts/tokenfactory/constants/TokenFactory";
 import SuiAlert from "components/SuiAlert";
 import { Grid } from "@mui/material";
+import moment from "moment";
 import CreateToken from "../CreateToken";
 import TokenFactoryStepper from "../TokenFactoryStepper";
 // import { TokenFactoryContext } from "./context/TokenFactoryContext";
@@ -25,17 +26,55 @@ const TokenFactoryContainer = () => {
     color: "error",
   });
 
+  const getTokenTransactionStatus = async () => {
+    const searchs = window.location.search.split("&");
+    const transactionHash = searchs.find((s) => s.includes("transactionHashes")).split("=");
+    const txHash = transactionHash[transactionHash.length - 1];
+    const status = await tokenFactoryStore.getTransactionStatus(txHash);
+
+    return status;
+  };
+
   useEffect(async () => {
     if (tokenFactoryStore.contract) {
-      let token = localStorage.getItem(LOCAL_STORAGE_CURRENT_TOKEN);
+      // eslint-disable-next-line no-debugger
+      // debugger;
+      // let token = localStorage.getItem(LOCAL_STORAGE_CURRENT_TOKEN);
+      let token;
+      if (window.location.search && window.location.search.includes("transactionHashes")) {
+        const result = await getTokenTransactionStatus();
+        if (result.status?.SuccessValue != null) {
+          const action = result.transaction?.actions[0]?.FunctionCall;
+          if (action.method_name === "register" && action.args) {
+            token = JSON.parse(Buffer.from(action.args, "base64").toString("utf-8"));
+            token = {
+              ...token,
+              ...{
+                tokenName: token.token_name,
+                symbol: token.symbol,
+                initialSupply: token.total_supply / 10 ** token.decimal,
+                decimal: token.decimals,
+                initialRelease: (token.initial_release / token.total_supply) * 100,
+                treasury: (token.treasury_allocation / token.total_supply) * 100,
+                vestingStartTime: token.vesting_start_time / 10 ** 6,
+                vestingEndTime: token.vesting_end_time / 10 ** 6,
+                vestingInterval: token.vesting_interval / (24 * 3600 * 10 ** 9),
+                vestingDuration: Math.round(
+                  (moment(token.vesting_end_time / 10 ** 6) -
+                    moment(token.vesting_start_time / 10 ** 6)) /
+                    (10 ** 3 * 24 * 3600)
+                ),
+              },
+            };
+            tokenFactoryStore.setToken(token);
+          }
+        }
+      }
       if (window.location.search && window.location.search.includes("resume_token")) {
         const searchs = window.location.search.split("&");
         const resumeToken = searchs.find((s) => s.includes("resume_token")).split("=");
         const tokenSymbol = resumeToken[resumeToken.length - 1];
         token = tokenFactoryStore.registeredTokens.find((rt) => rt.symbol === tokenSymbol);
-        tokenFactoryStore.setToken(token);
-      } else if (token) {
-        token = JSON.parse(token);
         tokenFactoryStore.setToken(token);
       }
 
@@ -92,12 +131,14 @@ const TokenFactoryContainer = () => {
             }
           }
         } catch (error) {
-          setAlert({
-            open: true,
-            message: error.message,
-            color: "error",
-          });
+          if (error?.type !== "NotEnoughAllowance")
+            setAlert({
+              open: true,
+              message: error.message,
+              color: "error",
+            });
           console.log(error);
+          console.log(error.type);
         }
       }
     }

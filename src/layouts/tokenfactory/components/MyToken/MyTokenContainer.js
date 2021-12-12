@@ -45,6 +45,9 @@ const MyTokenContainer = () => {
         ...t,
         ...{
           total_supply: humanize.numberFormat(t.total_supply / 10 ** t.decimals),
+          allocated_num: humanize.numberFormat(t.allocated_num / 10 ** t.decimals),
+          claimable_amount: humanize.numberFormat(t.claimable_amount / 10 ** t.decimals),
+          claimed: humanize.numberFormat(t.claimed / 10 ** t.decimals),
           vesting_start_time: moment(t.vesting_start_time / 10 ** 6).format("DD/MM/YY hh:mm a"),
           vesting_end_time: moment(t.vesting_end_time / 10 ** 6).format("DD/MM/YY hh:mm a"),
           vesting_interval: Math.round(t.vesting_interval / (24 * 3600 * 10 ** 9)),
@@ -60,12 +63,12 @@ const MyTokenContainer = () => {
                   <AutorenewOutlined sx={{ marginRight: 1 }} /> Resume
                 </SuiButton>
               )}
-              {t.allocation_initialized && parseInt(t.claimable_amount, 10) > 0 && (
+              {t.allocation_initialized === 1 && t.claimable_amount !== "0" && (
                 <SuiButton variant="gradient" color="primary" onClick={() => handleClaim(t)}>
                   <CheckCircleOutlined sx={{ marginRight: 1 }} /> Claim
                 </SuiButton>
               )}
-              {t.allocation_initialized && parseInt(t.claimable_amount, 10) === 0 && (
+              {t.allocation_initialized === 1 && t.claimed === t.allocated_num && (
                 <SuiButton disabled variant="gradient" color="success">
                   <CheckCircleOutlined sx={{ marginRight: 1 }} />
                 </SuiButton>
@@ -98,6 +101,9 @@ const MyTokenContainer = () => {
               { title: "Vesting Start Time", name: "vesting_start_time", align: "center" },
               { title: "Vesting End Time", name: "vesting_end_time", align: "center" },
               { title: "Vesting Interval (days)", name: "vesting_interval", align: "center" },
+              { title: "Allocation", name: "allocated_num", align: "center" },
+              { title: "Claimable", name: "claimable_amount", align: "center" },
+              { title: "Claimed", name: "claimed", align: "center" },
               { title: "", name: "action", align: "center" },
             ]}
             rows={rows}

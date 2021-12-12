@@ -5,7 +5,7 @@ import Shop from "examples/Icons/Shop";
 import { action, computed, makeObservable, observable } from "mobx";
 import moment from "moment";
 import { Contract, providers } from "near-api-js";
-import { LOCAL_STORAGE_CURRENT_TOKEN } from "../constants/TokenFactory";
+// import { LOCAL_STORAGE_CURRENT_TOKEN } from "../constants/TokenFactory";
 
 export const TOKEN_FACTORY_STEP = {
   REGISTER: "register",
@@ -22,7 +22,7 @@ export class Token {
 
   symbol = "";
 
-  initialSupply = 1000000000;
+  initialSupply = 100000000;
 
   decimal = 8;
 
@@ -36,7 +36,7 @@ export class Token {
 
   vestingInterval = 1;
 
-  vestingDuration = 3;
+  vestingDuration = 4;
 
   constructor() {
     makeObservable(this, {
@@ -123,6 +123,7 @@ export class TokenFactoryStore {
       getDeployerState: action,
       claim: action,
       getTransactionStatus: action,
+      checkExistenceToken: action,
       registerParams: computed,
     });
   }
@@ -169,9 +170,7 @@ export class TokenFactoryStore {
   register = async () => {
     this.activeStep = 0;
     console.log(this.contract);
-    localStorage.setItem(LOCAL_STORAGE_CURRENT_TOKEN, JSON.stringify(this.token));
-    // eslint-disable-next-line no-debugger
-    debugger;
+    // localStorage.setItem(LOCAL_STORAGE_CURRENT_TOKEN, JSON.stringify(this.token));
     const value = await this.contract.register(
       this.registerParams,
       this.DEFAULT_GAS,
@@ -222,13 +221,13 @@ export class TokenFactoryStore {
     current.init_token_allocation = value;
     this.appendRegisteredToken(current);
     this.setToken(new Token());
-    this.clearLocalStorageToken();
+    // this.clearLocalStorageToken();
     this.activeStep = -1;
     return value;
   };
 
-  getTokenState = async () => {
-    const value = await this.contract.get_token_state(this.registerParams);
+  getTokenState = async (token) => {
+    const value = await this.contract.get_token_state(token || this.registerParams);
     console.log("get_token_state : ", value);
     return value;
   };
@@ -241,9 +240,9 @@ export class TokenFactoryStore {
     else this.registeredTokens.push(current);
   };
 
-  clearLocalStorageToken = () => {
-    localStorage.removeItem(LOCAL_STORAGE_CURRENT_TOKEN);
-  };
+  // clearLocalStorageToken = () => {
+  //   localStorage.removeItem(LOCAL_STORAGE_CURRENT_TOKEN);
+  // };
 
   initTokenContract = async (ftContractName, viewMethods, changeMethods) => {
     try {
@@ -296,8 +295,22 @@ export class TokenFactoryStore {
   };
 
   getTransactionStatus = async (txHash) => {
-    const provider = new providers.JsonRpcProvider("https://archival-rpc.testnet.near.org");
-    const res = await provider.txStatus(txHash, this.tokenStore.accountId);
+    const nearProvider = new providers.JsonRpcProvider("https://archival-rpc.testnet.near.org");
+    const res = await nearProvider.txStatus(txHash, this.tokenStore.accountId);
+    console.log(res);
+    return res;
+  };
+
+  checkExistenceToken = async (tokenContractName) => {
+    const nearProvider = new providers.JsonRpcProvider("https://rpc.testnet.near.org");
+    const rawResult = await nearProvider.query({
+      request_type: "call_function",
+      account_id: tokenContractName,
+      method_name: "getMessages",
+      args_base64: "e30=",
+      finality: "optimistic",
+    });
+    const res = JSON.parse(Buffer.from(rawResult.result).toString());
     console.log(res);
     return res;
   };
@@ -377,9 +390,14 @@ export class TokenFactoryStore {
 
   get registerParams() {
     return {
-      ft_contract: `${this.token.symbol}.token-factory.tokenhub.testnet`.toLowerCase(),
+      ft_contract:
+        this.token.ft_contract ||
+        `${this.token.symbol}-${moment().valueOf()}.token-factory.tokenhub.testnet`.toLowerCase(),
       deployer_contract:
-        `${this.token.symbol}-deployer.token-factory.tokenhub.testnet`.toLowerCase(),
+        this.token.deployer_contract ||
+        `${
+          this.token.symbol
+        }-${moment().valueOf()}-deployer.token-factory.tokenhub.testnet`.toLowerCase(),
       total_supply: (this.token.initialSupply * 10 ** this.token.decimal).toString(),
       token_name: this.token.tokenName,
       symbol: this.token.symbol,

@@ -18,12 +18,7 @@ import Breadcrumbs from "examples/Breadcrumbs";
 import SuiTypography from "components/SuiTypography";
 
 // Custom styles for TokenNavbar
-import {
-  useSoftUIController,
-  setTransparentNavbar,
-  setMiniSidenav,
-  setOpenConfigurator,
-} from "context";
+import { useSoftUIController, setTransparentNavbar, setMiniSidenav } from "context";
 // Images
 import { observer } from "mobx-react";
 import { navbar, navbarContainer, navbarRow, navbarIconButton, navbarMobileMenu } from "./styles";
@@ -32,7 +27,7 @@ import { navbar, navbarContainer, navbarRow, navbarIconButton, navbarMobileMenu 
 function TokenNavbar({ absolute, light, isMini }) {
   const [navbarType, setNavbarType] = useState();
   const [controller, dispatch] = useSoftUIController();
-  const { miniSidenav, transparentNavbar, fixedNavbar, openConfigurator } = controller;
+  const { miniSidenav, transparentNavbar, fixedNavbar } = controller;
   const route = useLocation().pathname.split("/").slice(1);
   const { tokenStore } = controller;
 
@@ -63,7 +58,7 @@ function TokenNavbar({ absolute, light, isMini }) {
   }, [dispatch, fixedNavbar]);
 
   const handleMiniSidenav = () => setMiniSidenav(dispatch, !miniSidenav);
-  const handleConfiguratorOpen = () => setOpenConfigurator(dispatch, !openConfigurator);
+  // const handleConfiguratorOpen = () => setOpenConfigurator(dispatch, !openConfigurator);
   const handleLoginClick = () => {
     tokenStore.login();
   };
@@ -116,14 +111,14 @@ function TokenNavbar({ absolute, light, isMini }) {
                   {miniSidenav ? "menu_open" : "menu"}
                 </Icon>
               </IconButton>
-              <IconButton
+              {/* <IconButton
                 size="medium"
                 color="inherit"
                 sx={navbarIconButton}
                 onClick={handleConfiguratorOpen}
               >
                 <Icon>settings</Icon>
-              </IconButton>
+              </IconButton> */}
               {tokenStore?.isSignedIn && (
                 <IconButton
                   size="medium"
