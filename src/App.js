@@ -23,7 +23,7 @@ import routes from "routes";
 import { useSoftUIController, setMiniSidenav } from "context";
 
 // Images
-import brand from "assets/images/logo-ct.png";
+import brand from "assets/images/logo.png";
 
 export default function App() {
   const [controller, dispatch] = useSoftUIController();

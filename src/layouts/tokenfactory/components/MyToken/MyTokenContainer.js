@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/alt-text */
 // Soft UI Dashboard React examples
 import Table from "examples/Tables/Table";
 
@@ -44,6 +45,11 @@ const MyTokenContainer = () => {
       const data = tokenFactoryStore.registeredTokens.map((t) => ({
         ...t,
         ...{
+          symbol: (
+            <SuiBox>
+              <img src={t.icon} style={{ verticalAlign: "middle" }} /> <span>{t.symbol}</span>
+            </SuiBox>
+          ),
           total_supply: humanize.numberFormat(t.total_supply / 10 ** t.decimals),
           allocated_num: humanize.numberFormat(t.allocated_num / 10 ** t.decimals),
           claimable_amount: humanize.numberFormat(t.claimable_amount / 10 ** t.decimals),
@@ -104,7 +110,7 @@ const MyTokenContainer = () => {
               { title: "Allocation", name: "allocated_num", align: "center" },
               { title: "Claimable", name: "claimable_amount", align: "center" },
               { title: "Claimed", name: "claimed", align: "center" },
-              { title: "", name: "action", align: "center" },
+              { title: "", name: "action", align: "right" },
             ]}
             rows={rows}
           />

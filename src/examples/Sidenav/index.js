@@ -38,10 +38,14 @@ import SidenavCollapse from "examples/Sidenav/SidenavCollapse";
 
 // Custom styles for the Sidenav
 import SidenavRoot from "examples/Sidenav/SidenavRoot";
-import sidenavLogoLabel from "examples/Sidenav/styles/sidenav";
+// import sidenavLogoLabel from "examples/Sidenav/styles/sidenav";
 
 // Soft UI Dashboard PRO React context
 import { useSoftUIController, setMiniSidenav } from "context";
+
+// import lnc1 from "assets/images/logo-lnc-1.svg";
+import lnc2 from "assets/images/logo-lnc-2.svg";
+import lnc3 from "assets/images/logo-lnc-3.svg";
 
 function Sidenav({ color, brand, brandName, routes, ...rest }) {
   const [controller, dispatch] = useSoftUIController();
@@ -143,16 +147,36 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
           </SuiTypography>
         </SuiBox>
         <SuiBox component={NavLink} to="/" display="flex" alignItems="center">
-          {brand && <SuiBox component="img" src={brand} alt="Soft UI Logo" width="2rem" />}
-          <SuiBox
+          {/* <SuiBox
             width={!brandName && "100%"}
             sx={(theme) => sidenavLogoLabel(theme, { miniSidenav })}
           >
             <SuiTypography component="h6" variant="button" fontWeight="medium">
               {brandName}
             </SuiTypography>
-          </SuiBox>
+          </SuiBox> */}
         </SuiBox>
+        {brand && (
+          <SuiBox
+            component="img"
+            src={brand}
+            alt="Soft UI Logo"
+            width="8rem"
+            sx={{ paddingRight: "1rem", marginRight: "1rem", borderRight: "1px solid #ccc" }}
+          />
+        )}
+        {lnc3 && <SuiBox component="img" src={lnc3} alt="Soft UI Logo" width="4rem" />}
+        {lnc2 && (
+          <SuiBox>
+            <SuiBox
+              component="img"
+              src={lnc2}
+              alt="Soft UI Logo"
+              width="13rem"
+              sx={{ marginTop: "1rem" }}
+            />
+          </SuiBox>
+        )}
       </SuiBox>
       <Divider />
       <List>{renderRoutes}</List>

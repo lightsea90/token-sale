@@ -1,6 +1,8 @@
+/* eslint-disable jsx-a11y/alt-text */
+/* eslint-disable react/jsx-props-no-spreading */
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
-import { Card, Grid, MenuItem, Select, TextField } from "@mui/material";
+import { Avatar, Card, Grid, MenuItem, Paper, Select, TextField } from "@mui/material";
 import SuiBox from "components/SuiBox";
 import SuiButton from "components/SuiButton";
 import SuiInput from "components/SuiInput";
@@ -12,7 +14,9 @@ import { DateTimePicker, LoadingButton, LocalizationProvider } from "@mui/lab";
 import AdapterDateFns from "@mui/lab/AdapterDateFns";
 import moment from "moment";
 import { observer } from "mobx-react";
-import { BackupOutlined } from "@mui/icons-material";
+import { AddAPhotoOutlined, BackupOutlined, DeleteOutlined } from "@mui/icons-material";
+import Dropzone, { useDropzone } from "react-dropzone";
+import { resizeImage } from "helpers/TokenUltis";
 
 const CreateToken = (props) => {
   const { setAlert } = props;
@@ -23,6 +27,19 @@ const CreateToken = (props) => {
   const [loading, setLoading] = useState(props.loading || false);
   const [totalSupply, setTotalSupply] = useState(tokenFactoryStore.registerParams.total_supply);
   const [tokenValidation, setTokenValidation] = useState(false);
+
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: "image/jpeg, image/png",
+    maxFiles: 1,
+    onDrop: (acceptedFiles) => {
+      // eslint-disable-next-line no-debugger
+      resizeImage({ file: acceptedFiles[0], maxSize: 32 }).then((result) => {
+        tokenFactoryStore.token.icon = result;
+      });
+    },
+  });
+
+  const { ref, ...rootProps } = getRootProps();
 
   const checkTokenValidation = async () => {
     let isValid = true;
@@ -145,19 +162,49 @@ const CreateToken = (props) => {
                   />
                 </SuiBox>
                 <SuiBox mb={3}>
-                  <SuiBox mb={1} ml={0.5}>
-                    <SuiTypography component="label" variant="caption" fontWeight="bold">
-                      Symbol
-                    </SuiTypography>
-                  </SuiBox>
-                  <SuiInput
-                    disabled={loading}
-                    required
-                    type="text"
-                    placeholder="Symbol"
-                    onChange={handleSymbolChange}
-                    value={tokenFactoryStore.token.symbol}
-                  />
+                  <Grid container>
+                    <Grid item xs={6} sx={{ pr: 1 }}>
+                      <SuiBox mb={1} ml={0.5}>
+                        <SuiTypography component="label" variant="caption" fontWeight="bold">
+                          Symbol
+                        </SuiTypography>
+                      </SuiBox>
+                      <SuiInput
+                        disabled={loading}
+                        required
+                        type="text"
+                        placeholder="Symbol"
+                        onChange={handleSymbolChange}
+                        value={tokenFactoryStore.token.symbol}
+                      />
+                    </Grid>
+                    <Grid item xs={6} sx={{ pr: 1 }}>
+                      <SuiBox mb={1} ml={0.5}>
+                        <SuiTypography component="label" variant="caption" fontWeight="bold">
+                          Icon
+                        </SuiTypography>
+                      </SuiBox>
+                      <SuiBox {...rootProps} sx={{ float: "left" }}>
+                        <input {...getInputProps()} />
+                        {tokenFactoryStore.token.icon !== null ? (
+                          <SuiBox>
+                            <img src={tokenFactoryStore.token.icon} />
+                          </SuiBox>
+                        ) : (
+                          <AddAPhotoOutlined fontSize="large" />
+                        )}
+                      </SuiBox>
+                      {tokenFactoryStore.token.icon && (
+                        <DeleteOutlined
+                          sx={{ float: "right" }}
+                          fontSize="medium"
+                          onClick={() => {
+                            tokenFactoryStore.token.icon = null;
+                          }}
+                        />
+                      )}
+                    </Grid>
+                  </Grid>
                 </SuiBox>
                 <SuiBox mb={2}>
                   <SuiBox mb={1} ml={0.5}>
@@ -350,7 +397,7 @@ const CreateToken = (props) => {
               <LoadingButton
                 disabled={loading || !tokenValidation}
                 sx={{
-                  background: "linear-gradient(to right, #da4453, #89216b);",
+                  background: "linear-gradient(to left, #642b73, #c6426e)",
                   color: "#fff",
                 }}
                 onClick={handleRegisterToken}

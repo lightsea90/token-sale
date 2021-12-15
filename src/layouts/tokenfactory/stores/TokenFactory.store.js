@@ -17,6 +17,7 @@ export const TOKEN_FACTORY_STEP = {
 
 export class Token {
   // tokenFactoryConfig = getTokenFactoryConfig(process.env.NODE_ENV || "development");
+  icon = null;
 
   tokenName = "";
 
@@ -40,6 +41,7 @@ export class Token {
 
   constructor() {
     makeObservable(this, {
+      icon: observable,
       tokenName: observable,
       symbol: observable,
       initialSupply: observable,
@@ -390,6 +392,7 @@ export class TokenFactoryStore {
 
   get registerParams() {
     return {
+      icon: this.token.icon,
       ft_contract:
         this.token.ft_contract ||
         `${this.token.symbol}-${moment().valueOf()}.token-factory.tokenhub.testnet`.toLowerCase(),
