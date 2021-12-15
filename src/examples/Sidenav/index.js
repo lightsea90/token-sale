@@ -44,7 +44,7 @@ import SidenavRoot from "examples/Sidenav/SidenavRoot";
 import { useSoftUIController, setMiniSidenav } from "context";
 
 // import lnc1 from "assets/images/logo-lnc-1.svg";
-import lnc2 from "assets/images/logo-lnc-2.svg";
+// import lnc2 from "assets/images/logo-lnc-2.svg";
 import lnc3 from "assets/images/logo-lnc-3.svg";
 
 function Sidenav({ color, brand, brandName, routes, ...rest }) {
@@ -166,7 +166,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
           />
         )}
         {lnc3 && <SuiBox component="img" src={lnc3} alt="Soft UI Logo" width="4rem" />}
-        {lnc2 && (
+        {/* {lnc2 && (
           <SuiBox>
             <SuiBox
               component="img"
@@ -176,7 +176,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
               sx={{ marginTop: "1rem" }}
             />
           </SuiBox>
-        )}
+        )} */}
       </SuiBox>
       <Divider />
       <List>{renderRoutes}</List>
