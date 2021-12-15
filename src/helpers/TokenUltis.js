@@ -37,7 +37,7 @@ export const resizeImage = (settings) => {
     canvas.width = width;
     canvas.height = height;
     canvas.getContext("2d").drawImage(image, 0, 0, width, height);
-    const dataUrl = canvas.toDataURL("image/jpeg");
+    const dataUrl = canvas.toDataURL(file.type);
     return dataUrl;
   };
   return new Promise((ok, no) => {
