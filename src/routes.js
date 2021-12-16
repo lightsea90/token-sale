@@ -48,15 +48,16 @@ Coded by www.creative-tim.com
 import TokenFactory from "layouts/tokenfactory";
 
 // Soft UI Dashboard React icons
-import Shop from "examples/Icons/Shop";
+// import Shop from "examples/Icons/Shop";
 import MyToken from "layouts/tokenfactory/components/MyToken";
-// import Office from "examples/Icons/Office";
+import Office from "examples/Icons/Office";
 // import Settings from "examples/Icons/Settings";
 // import Document from "examples/Icons/Document";
-// import SpaceShip from "examples/Icons/SpaceShip";
+import SpaceShip from "examples/Icons/SpaceShip";
 // import CustomerSupport from "examples/Icons/CustomerSupport";
 // import CreditCard from "examples/Icons/CreditCard";
-// import Cube from "examples/Icons/Cube";
+import Cube from "examples/Icons/Cube";
+import DashboardToken from "layouts/tokenfactory/components/DashboardToken";
 
 const routes = [
   // {
@@ -80,10 +81,19 @@ const routes = [
   { type: "title", title: "Token Factory", key: "token-factory" },
   {
     type: "collapse",
+    name: "Dashboard",
+    key: "dashboard",
+    route: "/token-factory/dashboard",
+    icon: <Office size="12px" />,
+    component: DashboardToken,
+    noCollapse: true,
+  },
+  {
+    type: "collapse",
     name: "Create Token",
     key: "create-token",
     route: "/token-factory/create-token",
-    icon: <Shop size="12px" />,
+    icon: <Cube size="12px" />,
     component: TokenFactory,
     noCollapse: true,
   },
@@ -92,7 +102,7 @@ const routes = [
     name: "My Token",
     key: "my-token",
     route: "/token-factory/my-token",
-    icon: <Shop size="12px" />,
+    icon: <SpaceShip size="12px" />,
     component: MyToken,
     noCollapse: true,
   },

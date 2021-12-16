@@ -98,6 +98,8 @@ export class TokenFactoryStore {
 
   registeredTokens = [];
 
+  allTokens = [];
+
   tokenContract;
 
   contract = null;
@@ -111,8 +113,10 @@ export class TokenFactoryStore {
       registeredTokens: observable,
       contract: observable,
       // tokenContract: observable,
+      allTokens:observable,
 
       setRegisteredTokens: action,
+      setAllTokens: action,
       initContract: action,
       setToken: action,
       register: action,
@@ -126,6 +130,8 @@ export class TokenFactoryStore {
       claim: action,
       getTransactionStatus: action,
       checkExistenceToken: action,
+      getListAllTokens: action,
+      getListToken: action,
       registerParams: computed,
     });
   }
@@ -137,6 +143,11 @@ export class TokenFactoryStore {
   setRegisteredTokens = (lst) => {
     this.registeredTokens = lst;
     this.remapTokenList();
+  };
+
+  setAllTokens = (lst) => {
+    this.allTokens = lst;
+    // this.remapTokenList();
   };
 
   initContract = async () => {
@@ -321,6 +332,15 @@ export class TokenFactoryStore {
     if (this.tokenStore.accountId) {
       const value = await this.contract.list_my_tokens({ account_id: this.tokenStore.accountId });
       console.log("getListToken :", value);
+      return value;
+    }
+    return null;
+  };
+
+  getListAllTokens = async () => {
+    if (this.tokenStore.accountId) {
+      const value = await this.contract.list_all_tokens();
+      console.log("getListAllTokens :", value);
       return value;
     }
     return null;

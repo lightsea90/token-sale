@@ -89,7 +89,7 @@ export default function App() {
       )}
       <Switch>
         {getRoutes(routes)}
-        <Redirect from="*" to="/token-factory/my-token" />
+        <Redirect from="*" to="/token-factory/dashboard" />
       </Switch>
     </ThemeProvider>
   );
