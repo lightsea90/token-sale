@@ -14,16 +14,22 @@ const TokenFactoryProvider = (props) => {
   tokenFactoryStore.setTokenStore(tokenStore);
   useEffect(async () => {
     await tokenFactoryStore.initContract();
-    const lst = await Promise.all([
-      tokenFactoryStore.getListToken(),
-      tokenFactoryStore.getListAllTokens(),
-    ]);
-    if (lst) {
-      const lstMyToken = lst[0];
-      const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
-      tokenFactoryStore.setRegisteredTokens(mergeLst);
+    try {
+      const lst = await Promise.all([
+        tokenFactoryStore.getListToken(),
+        tokenFactoryStore.getListAllTokens(),
+      ]);
+      if (lst) {
+        if (lst?.length > 0) {
+          const lstMyToken = lst[0];
+          const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
+          tokenFactoryStore.setRegisteredTokens(mergeLst);
+        }
 
-      tokenFactoryStore.setAllTokens(lst[1]);
+        if (lst?.length > 1) tokenFactoryStore.setAllTokens(lst[1]);
+      }
+    } catch (error) {
+      console.log(error);
     }
   }, [tokenStore.accountId]);
   return (
