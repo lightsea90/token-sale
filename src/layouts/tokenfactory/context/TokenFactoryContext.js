@@ -15,19 +15,29 @@ const TokenFactoryProvider = (props) => {
   useEffect(async () => {
     await tokenFactoryStore.initContract();
     try {
-      const lst = await Promise.all([
-        tokenFactoryStore.getListToken(),
-        tokenFactoryStore.getListAllTokens(),
-      ]);
-      if (lst) {
-        if (lst?.length > 0) {
-          const lstMyToken = lst[0];
-          const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
-          tokenFactoryStore.setRegisteredTokens(mergeLst);
-        }
+      // const lst = await Promise.all([
+      //   tokenFactoryStore.getListToken(),
+      //   tokenFactoryStore.getListAllTokens(),
+      // ]);
 
-        if (lst?.length > 1) tokenFactoryStore.setAllTokens(lst[1]);
+      // if (lst) {
+      //   if (lst?.length > 0) {
+      //     const lstMyToken = lst[0];
+      //     const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
+      //     tokenFactoryStore.setRegisteredTokens(mergeLst);
+      //   }
+
+      //   if (lst?.length > 1) tokenFactoryStore.setAllTokens(lst[1]);
+      // }
+      const lstMyTokens = await tokenFactoryStore.getListToken();
+      if (lstMyTokens?.length > 0) {
+        const lstMyToken = lstMyTokens;
+        const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
+        tokenFactoryStore.setRegisteredTokens(mergeLst);
       }
+
+      const lstAllTokens = await tokenFactoryStore.getListAllTokens();
+      tokenFactoryStore.setAllTokens(lstAllTokens);
     } catch (error) {
       console.log(error);
     }

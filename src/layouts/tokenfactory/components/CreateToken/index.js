@@ -184,8 +184,8 @@ const CreateToken = (props) => {
                           Icon
                         </SuiTypography>
                       </SuiBox>
-                      <SuiBox {...rootProps} sx={{ float: "left" }}>
-                        <input {...getInputProps()} />
+                      <SuiBox {...rootProps} sx={{ float: "left" }} disabled={loading}>
+                        <input disabled={loading} {...getInputProps()} />
                         {tokenFactoryStore.token.icon !== null ? (
                           <SuiBox>
                             <img src={tokenFactoryStore.token.icon} />
@@ -198,6 +198,7 @@ const CreateToken = (props) => {
                         <DeleteOutlined
                           sx={{ float: "right" }}
                           fontSize="medium"
+                          disabled={loading}
                           onClick={() => {
                             tokenFactoryStore.token.icon = null;
                           }}
