@@ -29,14 +29,17 @@ const TokenFactoryProvider = (props) => {
 
       //   if (lst?.length > 1) tokenFactoryStore.setAllTokens(lst[1]);
       // }
-      const lstMyTokens = await tokenFactoryStore.getListToken();
-      if (lstMyTokens?.length > 0) {
-        const lstMyToken = lstMyTokens;
-        const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
-        tokenFactoryStore.setRegisteredTokens(mergeLst);
-      }
+      // const lstMyTokens = await tokenFactoryStore.getListToken();
+      // if (lstMyTokens?.length > 0) {
+      //   const lstMyToken = lstMyTokens;
+      //   const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
+      //   tokenFactoryStore.setRegisteredTokens(mergeLst);
+      // }
 
-      const lstAllTokens = await tokenFactoryStore.getListAllTokens();
+      const lstAllTokens = await tokenFactoryStore.getListAllTokenContracts();
+      const lstMyToken = lstAllTokens.filter((t) => t.creator === tokenStore.accountId);
+      const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
+      tokenFactoryStore.setRegisteredTokens(mergeLst);
       tokenFactoryStore.setAllTokens(lstAllTokens);
     } catch (error) {
       console.log(error);

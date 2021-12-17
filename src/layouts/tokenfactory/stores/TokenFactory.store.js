@@ -113,7 +113,7 @@ export class TokenFactoryStore {
       registeredTokens: observable,
       contract: observable,
       // tokenContract: observable,
-      allTokens:observable,
+      allTokens: observable,
 
       setRegisteredTokens: action,
       setAllTokens: action,
@@ -132,6 +132,7 @@ export class TokenFactoryStore {
       checkExistenceToken: action,
       getListAllTokens: action,
       getListToken: action,
+      getListAllTokenContracts: action,
       registerParams: computed,
     });
   }
@@ -159,7 +160,13 @@ export class TokenFactoryStore {
         this.tokenStore.walletConnection.account(),
         this.tokenStore.nearConfig.contractName,
         {
-          viewMethods: ["get_token_state", "list_my_tokens", "list_all_tokens"],
+          viewMethods: [
+            "get_token_state",
+            "list_my_tokens",
+            "list_all_tokens",
+            "list_all_token_contracts",
+            "list_token_states",
+          ],
           // Change methods can modify the state. But you don't receive the returned value when called.
           changeMethods: [
             "register",
@@ -182,21 +189,21 @@ export class TokenFactoryStore {
 
   register = async () => {
     this.activeStep = 0;
-    console.log(this.contract);
+    // console.log(this.contract);
     // localStorage.setItem(LOCAL_STORAGE_CURRENT_TOKEN, JSON.stringify(this.token));
     const value = await this.contract.register(
       this.registerParams,
       this.DEFAULT_GAS,
       this.tokenStore.nearUtils.format.parseNearAmount(this.DEFAULT_NEAR_AMOUNT)
     );
-    console.log("register : ", value);
+    // console.log("register : ", value);
     return value;
   };
 
   createContract = async () => {
     this.activeStep = 1;
     const value = await this.contract.create_ft_contract(this.registerParams, this.DEFAULT_GAS);
-    console.log("create_ft_contract : ", value);
+    // console.log("create_ft_contract : ", value);
     const current = { ...{}, ...this.registerParams };
     current.create_ft_contract = value;
     this.appendRegisteredToken(current);
@@ -209,7 +216,7 @@ export class TokenFactoryStore {
       this.registerParams,
       this.DEFAULT_GAS
     );
-    console.log("create_deployer_contract : ", value);
+    // console.log("create_deployer_contract : ", value);
     const current = { ...{}, ...this.registerParams };
     current.create_deployer_contract = value;
     this.appendRegisteredToken(current);
@@ -219,7 +226,7 @@ export class TokenFactoryStore {
   issue = async () => {
     this.activeStep = 3;
     const value = await this.contract.issue_ft(this.registerParams, this.DEFAULT_GAS);
-    console.log("issue_ft : ", value);
+    // console.log("issue_ft : ", value);
     const current = { ...{}, ...this.registerParams };
     current.issue_ft = value;
     this.appendRegisteredToken(current);
@@ -229,7 +236,7 @@ export class TokenFactoryStore {
   initTokenAllocation = async () => {
     this.activeStep = 4;
     const value = await this.contract.init_token_allocation(this.registerParams, this.DEFAULT_GAS);
-    console.log("init_token_allocation : ", value);
+    // console.log("init_token_allocation : ", value);
     const current = { ...{}, ...this.registerParams };
     current.init_token_allocation = value;
     this.appendRegisteredToken(current);
@@ -241,7 +248,7 @@ export class TokenFactoryStore {
 
   getTokenState = async (token) => {
     const value = await this.contract.get_token_state(token || this.registerParams);
-    console.log("get_token_state : ", value);
+    // console.log("get_token_state : ", value);
     return value;
   };
 
@@ -296,7 +303,7 @@ export class TokenFactoryStore {
               this.DEFAULT_STORAGE_DEPOSIT.toString()
             )
           );
-          console.log(storageDeposit);
+          // console.log(storageDeposit);
         }
         const res = await deployerContract.claim({}, this.DEFAULT_GAS);
         return res;
@@ -310,7 +317,7 @@ export class TokenFactoryStore {
   getTransactionStatus = async (txHash) => {
     const nearProvider = new providers.JsonRpcProvider("https://archival-rpc.testnet.near.org");
     const res = await nearProvider.txStatus(txHash, this.tokenStore.accountId);
-    console.log(res);
+    // console.log(res);
     return res;
   };
 
@@ -324,14 +331,14 @@ export class TokenFactoryStore {
       finality: "optimistic",
     });
     const res = JSON.parse(Buffer.from(rawResult.result).toString());
-    console.log(res);
+    // console.log(res);
     return res;
   };
 
   getListToken = async () => {
     if (this.tokenStore.accountId) {
       const value = await this.contract.list_my_tokens({ account_id: this.tokenStore.accountId });
-      console.log("getListToken :", value);
+      // console.log("getListToken :", value);
       return value;
     }
     return null;
@@ -340,8 +347,43 @@ export class TokenFactoryStore {
   getListAllTokens = async () => {
     if (this.tokenStore.accountId) {
       const value = await this.contract.list_all_tokens();
-      console.log("getListAllTokens :", value);
+      //console.log("getListAllTokens :", value);
       return value;
+    }
+    return null;
+  };
+
+  getListTokenState = async () => {};
+
+  getListAllTokenContracts = async () => {
+    // const { account } = this.tokenStore;
+    if (this.tokenStore.account && this.tokenStore.account.accountId) {
+      const value = await this.contract.list_all_token_contracts();
+      let start = 0;
+      const length = 50;
+      const promises = [];
+      let finalList = [];
+      // console.log("getListAllTokenContracts :", value);
+      if (value) {
+        while (start < value.length) {
+          // console.log(start);
+          const stateLst = value.slice(start, start + length);
+          promises.push(
+            this.contract.list_token_states({
+              token_contracts: stateLst,
+            })
+          );
+          start += length;
+        }
+
+        const data = await Promise.all(promises);
+        data.forEach((element) => {
+          finalList = [...finalList, ...element];
+        });
+
+        // console.log("list_token_states", finalList);
+        return finalList;
+      }
     }
     return null;
   };
@@ -373,7 +415,10 @@ export class TokenFactoryStore {
           lstPromises.push(deployerPromise());
         });
         const result = await Promise.all(lstPromises);
-        console.log(result);
+        // console.log(result);
+
+        // const unClaimed = result.filter((r) => r.claimed === "0");
+
         // eslint-disable-next-line no-plusplus
         for (let i = 0; i < lst.length; i++) {
           merge.push({ ...lst[i], ...result[i] });
@@ -413,14 +458,9 @@ export class TokenFactoryStore {
   get registerParams() {
     return {
       icon: this.token.icon,
-      ft_contract:
-        this.token.ft_contract ||
-        `${this.token.symbol}-${moment().valueOf()}.token-factory.tokenhub.testnet`.toLowerCase(),
+      ft_contract: `${this.token.symbol}.token-factory.tokenhub.testnet`.toLowerCase(),
       deployer_contract:
-        this.token.deployer_contract ||
-        `${
-          this.token.symbol
-        }-${moment().valueOf()}-deployer.token-factory.tokenhub.testnet`.toLowerCase(),
+        `${this.token.symbol}-deployer.token-factory.tokenhub.testnet`.toLowerCase(),
       total_supply: (this.token.initialSupply * 10 ** this.token.decimal).toString(),
       token_name: this.token.tokenName,
       symbol: this.token.symbol,
@@ -442,5 +482,18 @@ export class TokenFactoryStore {
       ).toString(),
       vesting_interval: (this.token.vestingInterval * 24 * 3600 * 10 ** 9).toString(),
     };
+  }
+
+  get analysisData() {
+    if (this.allTokens?.length) {
+      const creators = [...new Set(this.allTokens.map((t) => t.creator))].length;
+      const symbols = [...new Set(this.allTokens.map((t) => t.symbol))].length;
+      return {
+        numberCreators: creators,
+        numberSymbols: symbols,
+        totals: this.allTokens.length,
+      };
+    }
+    return null;
   }
 }

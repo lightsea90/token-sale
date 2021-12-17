@@ -15,10 +15,13 @@ export class TokenStore {
 
   isSignedIn = false;
 
+  account = null;
+
   constructor() {
     makeObservable(this, {
       walletConnection: observable,
       accountId: observable,
+      account: observable,
       nearConfig: observable,
       nearUtils: observable,
       isSignedIn: observable,
@@ -36,13 +39,15 @@ export class TokenStore {
           deps: { keyStore: new keyStores.BrowserLocalStorageKeyStore() },
         },
         ...this.nearConfig,
-      });      
+      });
 
       this.walletConnection = new WalletConnection(near, "");
       this.isSignedIn = this.walletConnection.isSignedIn();
-
+      // console.log(process.env.TOKEN_FACTORY_CONTRACT_NAME || "token-factory.tokenhub.testnet");
+      // console.log(this.account);
       if (this.isSignedIn) {
         this.accountId = this.walletConnection.getAccountId();
+        this.account = await near.account(this.accountId);
       }
     } catch (error) {
       console.log(error);

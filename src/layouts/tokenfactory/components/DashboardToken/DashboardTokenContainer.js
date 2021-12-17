@@ -12,6 +12,8 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import TokenNavbar from "components/App/TokenNavbar";
 import { TokenFactoryContext } from "layouts/tokenfactory/context/TokenFactoryContext";
 import humanize from "humanize";
+import { Grid } from "@mui/material";
+import MiniStatisticsCard from "examples/Cards/StatisticsCards/MiniStatisticsCard";
 // eslint-disable-next-line import/no-extraneous-dependencies
 
 const DashboardTokenContainer = () => {
@@ -57,6 +59,35 @@ const DashboardTokenContainer = () => {
     <DashboardLayout>
       <TokenNavbar />
       <SuiBox py={3}>
+        <SuiBox mb={3}>
+          <Grid container spacing={3} justifyContent="center" alignItems="center">
+            <Grid item xs={8}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} xl={6}>
+                  <MiniStatisticsCard
+                    title={{ text: "Total creators" }}
+                    count={tokenFactoryStore.analysisData?.numberCreators}
+                    icon={{ color: "primary", component: "people" }}
+                  />
+                </Grid>
+                {/* <Grid item xs={12} sm={4} xl={4}>
+                  <MiniStatisticsCard
+                    title={{ text: "Total symbols" }}
+                    count={tokenFactoryStore.analysisData?.numberSymbols}
+                    icon={{ color: "success", component: "currency_bitcoin" }}
+                  />
+                </Grid> */}
+                <Grid item xs={12} sm={6} xl={6}>
+                  <MiniStatisticsCard
+                    title={{ text: "Total tokens" }}
+                    count={tokenFactoryStore.analysisData?.totals}
+                    icon={{ color: "success", component: "currency_bitcoin" }}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+        </SuiBox>
         <SuiBox mb={3}>
           <Table
             columns={[
