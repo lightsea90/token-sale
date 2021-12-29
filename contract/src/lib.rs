@@ -15,7 +15,7 @@ extern crate chrono;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::serde_json::json;
-use near_sdk::{env, near_bindgen, ext_contract};
+use near_sdk::{env, near_bindgen, ext_contract, assert_one_yocto};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::{AccountId, Balance, Timestamp, Duration, Gas};
 use near_sdk::{Promise, PromiseResult};
@@ -193,7 +193,9 @@ impl TokenSale {
     }
 
     // withdraw from the sale
+    #[payable]
     pub fn withdraw(&mut self, amount: U128) -> Promise {
+        assert_one_yocto();
         let current_ts = env::block_timestamp();
         assert!(
             current_ts >= self.start_time
@@ -307,13 +309,13 @@ impl TokenSale {
     }
 
     // Get the redeemable tokens in total
-    pub fn get_total_allocated_tokens(&mut self, account_id: Option<AccountId>) -> Balance {
+    pub fn get_total_allocated_tokens(&self, account_id: AccountId) -> Balance {
         let total_deposit = self.get_total_deposit().amount;
         if total_deposit == 0 {
             return 0;
         }
         // let current_price = (total_deposit as f64) / (self.num_of_tokens as f64);
-        let account_id = account_id.unwrap_or(env::signer_account_id());
+        // let account_id = account_id.unwrap_or(env::signer_account_id());
         let total_redeemable_num = (
             (self.deposit_map.get(&account_id).unwrap_or(0) as f64) 
             * (self.num_of_tokens as f64) / (total_deposit as f64)
@@ -350,9 +352,11 @@ impl TokenSale {
     }
 
     // Redeem the tokens back to wallet
+    #[payable]
     pub fn redeem(&mut self) -> Promise {
+        assert_one_yocto();
         let account_id = env::signer_account_id();
-        let amount_to_redeem = self.get_total_allocated_tokens(Some(env::signer_account_id()));
+        let amount_to_redeem = self.get_total_allocated_tokens(env::signer_account_id());
         assert!(
             self.redeemed_map.get(&account_id).unwrap_or(0) == 0,
             "User has already redeemed",
@@ -380,12 +384,11 @@ impl TokenSale {
         );
     }
 
-    pub fn get_user_sale(&mut self) -> UserSaleInfo {
-        let account_id = env::signer_account_id();
+    pub fn get_user_sale(&self, account_id: AccountId) -> UserSaleInfo {
         return UserSaleInfo {
             deposit: WrappedBalance::from(self.deposit_map.get(&account_id).unwrap_or(0)),
-            total_allocated_tokens: WrappedBalance::from(self.get_total_allocated_tokens(Some(account_id.clone()))),
             is_redeemed: self.redeemed_map.get(&account_id).unwrap_or(0),
+            total_allocated_tokens: WrappedBalance::from(self.get_total_allocated_tokens(account_id)),
         };
     }
 
@@ -403,7 +406,7 @@ impl TokenSale {
 
         match env::promise_result(0) {
             PromiseResult::Successful(_) => {
-                let amount_to_redeem_in_theory = self.get_total_allocated_tokens(Some(predecessor_account_id.clone()));
+                let amount_to_redeem_in_theory = self.get_total_allocated_tokens(predecessor_account_id.clone());
                 assert!(
                     amount_to_redeem == amount_to_redeem_in_theory,
                     "Something wrong. Amount to redeem has changed",
