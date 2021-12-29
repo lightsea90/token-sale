@@ -24,10 +24,11 @@ import { useSoftUIController, setMiniSidenav } from "context";
 
 // Images
 import brand from "assets/images/logo.png";
+import { observer } from "mobx-react";
 
-export default function App() {
+const App = () => {
   const [controller, dispatch] = useSoftUIController();
-  const { miniSidenav, direction, layout, sidenavColor } = controller;
+  const { miniSidenav, direction, layout, sidenavColor, tokenStore } = controller;
   const [onMouseEnter, setOnMouseEnter] = useState(false);
   const { pathname } = useLocation();
 
@@ -57,6 +58,14 @@ export default function App() {
     document.documentElement.scrollTop = 0;
     document.scrollingElement.scrollTop = 0;
   }, [pathname]);
+
+  // Init wallet connection
+  useEffect(() => {
+    const initWalletConnection = async () => {
+      await tokenStore.initWalletConnection();
+    };
+    initWalletConnection();
+  }, []);
 
   const getRoutes = (allRoutes) =>
     allRoutes.map((route) => {
@@ -93,4 +102,6 @@ export default function App() {
       </Switch>
     </ThemeProvider>
   );
-}
+};
+
+export default observer(App);

@@ -1,7 +1,8 @@
 /* eslint-disable max-classes-per-file */
 /* eslint-disable lines-between-class-members */
 /* eslint-disable object-shorthand */
-import { observable, action, makeObservable, computed, makeAutoObservable, reaction } from "mobx";
+/* eslint-disable no-debugger */
+import { observable, action, makeObservable, makeAutoObservable } from "mobx";
 import moment from "moment";
 import { Contract } from "near-api-js";
 import { NotificationType } from "../constants/NotificationType";
@@ -47,9 +48,6 @@ export class TokenSalesStore {
   DEFAULT_STORAGE_DEPOSIT = 0.00125;
   notification = new NotificationObj();
   loading = false;
-  countdownStart = 0;
-  countdownGrace = 0;
-  countdownRedeem = 0;
   tokenStore = null;
 
   constructor() {
@@ -64,9 +62,6 @@ export class TokenSalesStore {
       redeem: observable,
       notification: observable,
       loading: observable,
-      countdownStart: observable,
-      countdownGrace: observable,
-      countdownRedeem: observable,
 
       initContract: action,
       initTokenContract: action,
@@ -82,21 +77,13 @@ export class TokenSalesStore {
       getCountdownRedeem: action,
 
       // period: computed,
-      depositTime: computed,
-      withdrawalTime: computed,
-      redeemTime: computed,
+      getStartTime: action,
+      getSalesEndTime: action,
+      getRedeemEndTime: action,
       // countDownDeposit: computed,
       // countDownWithdraw: computed,
       // countDownRedeem: computed
     });
-    reaction(
-      () => this.tokenContract,
-      (tokenContract) => {
-        this.countdownStart = this.getCountdownStart(tokenContract);
-        this.countdownGrace = this.getCountdownGrace(tokenContract);
-        this.countdownRedeem = this.getCountdownRedeem(tokenContract);
-      }
-    );
   }
   setTokenStore = (tokenStore) => {
     this.tokenStore = tokenStore;
@@ -104,14 +91,15 @@ export class TokenSalesStore {
 
   initContract = async () => {
     // Initialize connection to the NEAR testnet
+    console.log(this.tokenStore.nearConfig.contractName);
     try {
       const contract = await new Contract(
         this.tokenStore.walletConnection.account(),
-        this.tokenStore.nearConfig.contractName,
+        "dev-1636808664410-33820590914842",
         {
-          viewMethods: ["get_total_deposit", "get_sale_info", "check_sale_status"],
+          viewMethods: ["get_total_deposit", "get_sale_info", "check_sale_status", "get_user_sale"],
           // Change methods can modify the state. But you don't receive the returned value when called.
-          changeMethods: ["deposit", "withdraw", "finish", "redeem", "get_user_sale"],
+          changeMethods: ["deposit", "withdraw", "finish", "redeem"],
         }
       );
 
@@ -152,9 +140,11 @@ export class TokenSalesStore {
   fetchUserData = async (contract) => {
     this.setNotification("Waiting for transaction...");
     try {
-      this.userContract = await contract.get_user_sale();
+      this.userContract = await contract.get_user_sale({ account_id: this.tokenStore.accountId });
+      console.log("Fetch User Data :", this.userContract);
     } catch (error) {
       this.setNotification(error.message, NotificationType.ERROR);
+      console.error("Fetch User Data :", error);
     }
   };
 
@@ -204,6 +194,7 @@ export class TokenSalesStore {
 
   submitWithdraw = async () => {
     const { contract } = this.tokenState;
+    debugger;
     try {
       this.notification = {
         type: NotificationType.INFO,
@@ -243,6 +234,7 @@ export class TokenSalesStore {
   submitRedeem = async () => {
     try {
       const { contract } = this.tokenState;
+      debugger;
       let storageDeposit = await this.tokenContract.storage_balance_of({
         account_id: this.tokenStore.accountId,
       });
@@ -343,24 +335,24 @@ export class TokenSalesStore {
     }
   };
 
-  get depositTime() {
+  getStartTime = () => {
     if (this.tokenContract?.saleInfo) {
       const startTime = this.tokenContract?.saleInfo?.start_time / 1000000;
       return moment(startTime).format("YYYY-MM-DD HH:mm:ss");
     }
     return -1;
-  }
+  };
 
-  get withdrawalTime() {
+  getSalesEndTime = () => {
     if (this.tokenContract?.saleInfo) {
       const startTime = this.tokenContract?.saleInfo?.start_time / 1000000;
       const saleDuration = this.tokenContract.saleInfo.sale_duration / 1000000;
       return moment(startTime + saleDuration).format("YYYY-MM-DD HH:mm:ss");
     }
     return -1;
-  }
+  };
 
-  get redeemTime() {
+  getRedeemEndTime = () => {
     if (this.tokenContract?.saleInfo) {
       const startTime = this.tokenContract?.saleInfo?.start_time / 1000000;
       const saleDuration = this.tokenContract.saleInfo.sale_duration / 1000000;
@@ -368,5 +360,5 @@ export class TokenSalesStore {
       return moment(startTime + saleDuration + graceDuration).format("YYYY-MM-DD HH:mm:ss");
     }
     return -1;
-  }
+  };
 }

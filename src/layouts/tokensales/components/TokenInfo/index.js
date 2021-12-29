@@ -7,6 +7,7 @@ import { observer } from "mobx-react";
 import { useContext, useEffect } from "react";
 import wavesWhite from "assets/images/shapes/waves-white.svg";
 import SuiTypography from "components/SuiTypography";
+import humanize from "humanize";
 
 const TokenInfo = () => {
   const { tokenSalesStore } = useContext(TokenSalesContext);
@@ -26,9 +27,11 @@ const TokenInfo = () => {
                 <SuiBox display="flex" flexDirection="column" height="100%">
                   <SuiTypography variant="h6" component="div">
                     Number of tokens for sale:{" "}
-                    {formatTokenAmountToHumanReadable(
-                      tokenContract.saleInfo.num_of_tokens.toString(),
-                      tokenContract.tokenInfo.decimals
+                    {humanize.numberFormat(
+                      formatTokenAmountToHumanReadable(
+                        tokenContract.saleInfo.num_of_tokens.toString(),
+                        tokenContract.tokenInfo.decimals
+                      )
                     )}
                   </SuiTypography>
                   <SuiTypography variant="h6" component="div">
@@ -39,11 +42,14 @@ const TokenInfo = () => {
                   </SuiTypography>
                   <SuiTypography variant="h6" component="div">
                     Price:{" "}
-                    {tokenContract.totalDeposit.formatted_amount /
-                      formatTokenAmountToHumanReadable(
-                        tokenContract.saleInfo.num_of_tokens.toString(),
-                        tokenContract.tokenInfo.decimals
-                      )}
+                    {humanize.numberFormat(
+                      tokenContract.totalDeposit.formatted_amount /
+                        formatTokenAmountToHumanReadable(
+                          tokenContract.saleInfo.num_of_tokens.toString(),
+                          tokenContract.tokenInfo.decimals
+                        ),
+                      tokenContract.tokenInfo.decimals
+                    )}
                   </SuiTypography>
                 </SuiBox>
               </Grid>

@@ -27,6 +27,54 @@ export const ACTION = {
   WITHDRAWAL: "WITHDRAWAL",
   REDEEM: "REDEEM",
 };
+
+export const TokenSalesFormSkeleton = () => (
+  <>
+    <Paper
+      component="div"
+      sx={{
+        p: "2px 4px",
+        display: "flex",
+        alignItems: "center",
+        width: "100%",
+        marginTop: "10px",
+      }}
+    >
+      <Typography variant="h2" component="div" sx={{ width: "100%" }}>
+        <Skeleton />
+      </Typography>
+    </Paper>
+    <Paper
+      component="div"
+      sx={{
+        p: "2px 4px",
+        display: "flex",
+        alignItems: "center",
+        width: "100%",
+        marginTop: "10px",
+      }}
+    >
+      <Typography variant="h2" component="div" sx={{ width: "100%" }}>
+        <Skeleton />
+      </Typography>
+    </Paper>
+    <Paper
+      component="div"
+      sx={{
+        p: "2px 4px",
+        display: "flex",
+        alignItems: "center",
+        width: "100%",
+        marginTop: "10px",
+      }}
+    >
+      <Typography variant="h2" component="div" sx={{ width: "100%" }}>
+        <Skeleton />
+      </Typography>
+    </Paper>
+  </>
+);
+
 const TokenSalesForm = () => {
   const { tokenSalesStore } = useContext(TokenSalesContext);
   const { userContract, tokenContract, tokenStore } = tokenSalesStore;
@@ -81,7 +129,7 @@ const TokenSalesForm = () => {
                     label={`Deposit : ${nearUtils.format.formatNearAmount(
                       userContract?.deposit || 0
                     )}`}
-                    disabled={!(tokenSalesStore.period === "ON_SALE")}
+                    disabled={!(tokenContract?.tokenPeriod === "ON_SALE")}
                     buttonDisable={tokenSalesStore.deposit === 0}
                     onTextChange={(e) => {
                       tokenSalesStore.deposit = e.target.value;
@@ -91,13 +139,18 @@ const TokenSalesForm = () => {
                       setOpenConfirmDialog(true);
                     }}
                     loading={loading}
+                    adornment="NEAR"
+                    buttonText="Deposit"
                   />
 
                   <SalesForm
                     helperText="Please enter your withdraw"
                     label="Withdraw"
                     disabled={
-                      !(tokenSalesStore.period === "ON_SALE" || tokenSalesStore.period === "ON_GRACE")
+                      !(
+                        tokenContract?.tokenPeriod === "ON_SALE" ||
+                        tokenContract?.tokenPeriod === "ON_GRACE"
+                      )
                     }
                     buttonDisable={tokenSalesStore.withdraw === 0}
                     onTextChange={(e) => {
@@ -108,6 +161,8 @@ const TokenSalesForm = () => {
                       setOpenConfirmDialog(true);
                     }}
                     loading={loading}
+                    adornment="NEAR"
+                    buttonText="Withdrawal"
                   />
 
                   <SalesForm
@@ -115,10 +170,10 @@ const TokenSalesForm = () => {
                     label="Redeem"
                     defaultValue={handleRedeemValue()}
                     buttonDisable={
-                      userContract?.is_redeemed === 1 || tokenSalesStore.period !== "FINISHED"
+                      userContract?.is_redeemed === 1 || tokenContract.tokenPeriod !== "FINISHED"
                     }
                     disabled={
-                      userContract?.is_redeemed === 1 || tokenSalesStore.period !== "FINISHED"
+                      userContract?.is_redeemed === 1 || tokenContract.tokenPeriod !== "FINISHED"
                     }
                     onTextChange={(e) => {
                       tokenSalesStore.redeem = e.target.value;
@@ -128,55 +183,14 @@ const TokenSalesForm = () => {
                       setOpenConfirmDialog(true);
                     }}
                     loading={loading}
+                    adornment={tokenContract.tokenInfo.symbol || ""}
+                    buttonText="Redeem"
                   />
                 </SuiBox>
               </Grid>
             </Grid>
           ) : (
-            <>
-              <Paper
-                component="div"
-                sx={{
-                  p: "2px 4px",
-                  display: "flex",
-                  alignItems: "center",
-                  width: "100%",
-                  marginTop: "10px",
-                }}
-              >
-                <Typography variant="h2" component="div" sx={{ width: "100%" }}>
-                  <Skeleton />
-                </Typography>
-              </Paper>
-              <Paper
-                component="div"
-                sx={{
-                  p: "2px 4px",
-                  display: "flex",
-                  alignItems: "center",
-                  width: "100%",
-                  marginTop: "10px",
-                }}
-              >
-                <Typography variant="h2" component="div" sx={{ width: "100%" }}>
-                  <Skeleton />
-                </Typography>
-              </Paper>
-              <Paper
-                component="div"
-                sx={{
-                  p: "2px 4px",
-                  display: "flex",
-                  alignItems: "center",
-                  width: "100%",
-                  marginTop: "10px",
-                }}
-              >
-                <Typography variant="h2" component="div" sx={{ width: "100%" }}>
-                  <Skeleton />
-                </Typography>
-              </Paper>
-            </>
+            <TokenSalesFormSkeleton />
           )}
         </SuiBox>
       </Card>

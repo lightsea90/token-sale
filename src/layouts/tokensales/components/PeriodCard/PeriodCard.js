@@ -10,6 +10,7 @@ import Icon from "@mui/material/Icon";
 import SuiBox from "components/SuiBox";
 import SuiTypography from "components/SuiTypography";
 import FlipCountdown from "@rumess/react-flip-countdown";
+import "./PeriodCard.scss";
 
 function PeriodCard({ bgColor, title, period, countDown, icon, direction }) {
   return (

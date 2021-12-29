@@ -44,11 +44,11 @@ Coded by www.creative-tim.com
 // import Profile from "layouts/profile";
 // import SignIn from "layouts/authentication/sign-in";
 // import SignUp from "layouts/authentication/sign-up";
-// import TokenSales from "layouts/tokensales";
+import TokenSales from "layouts/tokensales";
 import TokenFactory from "layouts/tokenfactory";
 
 // Soft UI Dashboard React icons
-// import Shop from "examples/Icons/Shop";
+import Shop from "examples/Icons/Shop";
 import MyToken from "layouts/tokenfactory/components/MyToken";
 import Office from "examples/Icons/Office";
 // import Settings from "examples/Icons/Settings";
@@ -104,6 +104,16 @@ const routes = [
     route: "/token-factory/my-token",
     icon: <SpaceShip size="12px" />,
     component: MyToken,
+    noCollapse: true,
+  },
+  { type: "title", title: "Token Sales", key: "token-sale" },
+  {
+    type: "collapse",
+    name: "Token Sales",
+    key: "token-sales",
+    route: "/token-sales",
+    icon: <Shop size="12px" />,
+    component: TokenSales,
     noCollapse: true,
   },
   // {

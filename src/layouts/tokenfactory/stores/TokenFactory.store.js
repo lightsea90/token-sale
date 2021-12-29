@@ -153,9 +153,6 @@ export class TokenFactoryStore {
 
   initContract = async () => {
     try {
-      if (!this.tokenStore.walletConnection) {
-        await this.tokenStore.initWalletConnection();
-      }
       const contract = await new Contract(
         this.tokenStore.walletConnection.account(),
         this.tokenStore.nearConfig.contractName,
@@ -347,7 +344,6 @@ export class TokenFactoryStore {
   getListAllTokens = async () => {
     if (this.tokenStore.accountId) {
       const value = await this.contract.list_all_tokens();
-      //console.log("getListAllTokens :", value);
       return value;
     }
     return null;

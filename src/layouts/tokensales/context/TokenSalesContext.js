@@ -11,6 +11,7 @@ const TokenSalesProvider = (props) => {
   const { tokenStore } = controller;
   const { children } = props;
   tokenSalesStore.setTokenStore(tokenStore);
+
   return (
     <TokenSalesContext.Provider
       value={{

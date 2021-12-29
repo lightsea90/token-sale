@@ -19,7 +19,7 @@ Coded by www.creative-tim.com
   you can customize the states for the different components here.
 */
 
-import { createContext, useContext, useEffect, useReducer } from "react";
+import { createContext, useContext, useReducer } from "react";
 
 // prop-types is a library for typechecking of props
 import PropTypes from "prop-types";
@@ -81,10 +81,6 @@ function SoftUIControllerProvider({ children }) {
   };
 
   const [controller, dispatch] = useReducer(reducer, initialState);
-
-  useEffect(async () => {
-    await tokenStore.initWalletConnection();
-  }, []);
 
   return <SoftUI.Provider value={[controller, dispatch]}>{children}</SoftUI.Provider>;
 }

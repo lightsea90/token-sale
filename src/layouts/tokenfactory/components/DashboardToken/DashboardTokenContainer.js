@@ -18,40 +18,78 @@ import MiniStatisticsCard from "examples/Cards/StatisticsCards/MiniStatisticsCar
 
 const DashboardTokenContainer = () => {
   const { tokenFactoryStore } = useContext(TokenFactoryContext);
-  // const { tokenStore } = tokenFactoryStore;
+  const { tokenStore } = tokenFactoryStore;
   const [rows, setRows] = useState([]);
+  useEffect(async () => {
+    // eslint-disable-next-line no-debugger
+    if (tokenStore.accountId) {
+      await tokenFactoryStore.initContract();
+      try {
+        // const lst = await Promise.all([
+        //   tokenFactoryStore.getListToken(),
+        //   tokenFactoryStore.getListAllTokens(),
+        // ]);
+
+        // if (lst) {
+        //   if (lst?.length > 0) {
+        //     const lstMyToken = lst[0];
+        //     const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
+        //     tokenFactoryStore.setRegisteredTokens(mergeLst);
+        //   }
+
+        //   if (lst?.length > 1) tokenFactoryStore.setAllTokens(lst[1]);
+        // }
+        // const lstMyTokens = await tokenFactoryStore.getListToken();
+        // if (lstMyTokens?.length > 0) {
+        //   const lstMyToken = lstMyTokens;
+        //   const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
+        //   tokenFactoryStore.setRegisteredTokens(mergeLst);
+        // }
+
+        const lstAllTokens = await tokenFactoryStore.getListAllTokenContracts();
+        const lstMyToken = lstAllTokens.filter((t) => t.creator === tokenStore.accountId);
+        const mergeLst = await tokenFactoryStore.getDeployerState(lstMyToken);
+        tokenFactoryStore.setRegisteredTokens(mergeLst);
+        tokenFactoryStore.setAllTokens(lstAllTokens);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  }, [tokenStore.accountId]);
 
   useEffect(() => {
-    try {
-      const data = tokenFactoryStore.allTokens.map((t) => ({
-        ...t,
-        ...{
-          symbol: (
-            <a
-              href={`https://explorer.testnet.near.org/accounts/${t.ft_contract}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <SuiBox>
-                <img src={t.icon} style={{ verticalAlign: "middle" }} /> <span>{t.symbol}</span>
-              </SuiBox>
-            </a>
-          ),
-          creator: (
-            <a
-              href={`https://explorer.testnet.near.org/accounts/${t.creator}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t.creator}
-            </a>
-          ),
-          total_supply: humanize.numberFormat(t.total_supply / 10 ** t.decimals),
-        },
-      }));
-      setRows(data);
-    } catch (error) {
-      console.log(error);
+    if (tokenFactoryStore.registeredTokens) {
+      try {
+        const data = tokenFactoryStore.allTokens.map((t) => ({
+          ...t,
+          ...{
+            symbol: (
+              <a
+                href={`https://explorer.testnet.near.org/accounts/${t.ft_contract}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <SuiBox>
+                  <img src={t.icon} style={{ verticalAlign: "middle" }} /> <span>{t.symbol}</span>
+                </SuiBox>
+              </a>
+            ),
+            creator: (
+              <a
+                href={`https://explorer.testnet.near.org/accounts/${t.creator}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {t.creator}
+              </a>
+            ),
+            total_supply: humanize.numberFormat(t.total_supply / 10 ** t.decimals),
+          },
+        }));
+        setRows(data);
+      } catch (error) {
+        console.log(error);
+      }
     }
   }, [tokenFactoryStore.registeredTokens]);
 
@@ -66,7 +104,7 @@ const DashboardTokenContainer = () => {
                 <Grid item xs={12} sm={6} xl={6}>
                   <MiniStatisticsCard
                     title={{ text: "Total creators" }}
-                    count={tokenFactoryStore.analysisData?.numberCreators}
+                    count={tokenFactoryStore.analysisData?.numberCreators || 0}
                     icon={{ color: "primary", component: "people" }}
                   />
                 </Grid>
@@ -80,7 +118,7 @@ const DashboardTokenContainer = () => {
                 <Grid item xs={12} sm={6} xl={6}>
                   <MiniStatisticsCard
                     title={{ text: "Total tokens" }}
-                    count={tokenFactoryStore.analysisData?.totals}
+                    count={tokenFactoryStore.analysisData?.totals || 0}
                     icon={{ color: "success", component: "currency_bitcoin" }}
                   />
                 </Grid>
