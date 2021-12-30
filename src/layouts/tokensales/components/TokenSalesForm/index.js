@@ -91,7 +91,7 @@ const TokenSalesForm = () => {
           await tokenSalesStore.submitDeposit();
           break;
         case ACTION.WITHDRAWAL:
-          await tokenSalesStore.submitWithdraw();
+          await tokenSalesStore.submitWithdrawal();
           break;
         case ACTION.REDEEM:
           await tokenSalesStore.submitRedeem();
@@ -145,7 +145,7 @@ const TokenSalesForm = () => {
 
                   <SalesForm
                     helperText="Please enter your withdraw"
-                    label="Withdraw"
+                    label="Withdrawal"
                     disabled={
                       !(
                         tokenContract?.tokenPeriod === "ON_SALE" ||

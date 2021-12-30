@@ -70,7 +70,7 @@ export class TokenSalesStore {
       setTokenStore: action,
       // logout: action,
       submitDeposit: action,
-      submitWithdraw: action,
+      submitWithdrawal: action,
       submitRedeem: action,
       getCountdownStart: action,
       getCountdownGrace: action,
@@ -192,9 +192,8 @@ export class TokenSalesStore {
     }
   };
 
-  submitWithdraw = async () => {
+  submitWithdrawal = async () => {
     const { contract } = this.tokenState;
-    debugger;
     try {
       this.notification = {
         type: NotificationType.INFO,
@@ -203,7 +202,7 @@ export class TokenSalesStore {
       };
       const nearAmount = this.tokenStore.nearUtils.format.parseNearAmount(this.withdraw.toString());
       console.log(nearAmount);
-      const res = await contract.withdraw({ amount: nearAmount }, this.DEFAULT_GAS);
+      const res = await contract.withdraw({ amount: nearAmount }, this.DEFAULT_GAS, "1");
       if (res) {
         this.notification = {
           ...this.notification,
@@ -234,7 +233,6 @@ export class TokenSalesStore {
   submitRedeem = async () => {
     try {
       const { contract } = this.tokenState;
-      debugger;
       let storageDeposit = await this.tokenContract.storage_balance_of({
         account_id: this.tokenStore.accountId,
       });
@@ -251,7 +249,8 @@ export class TokenSalesStore {
         message: "Waiting for transaction redeem...",
         show: true,
       };
-      const res = await contract.redeem({}, this.DEFAULT_GAS);
+
+      const res = await contract.redeem({}, this.DEFAULT_GAS, "1");
       if (res) {
         this.notification = {
           type: NotificationType.SUCCESS,
