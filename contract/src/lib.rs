@@ -62,6 +62,7 @@ pub struct UserSaleInfo {
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct TokenSale {
+    owner_id: AccountId,
     ft_contract_name: AccountId,
     num_of_tokens: Balance,
     deposit_map: UnorderedMap<AccountId, Balance>,
@@ -70,6 +71,7 @@ pub struct TokenSale {
     grace_duration: Duration,
     is_finished: bool,
     redeemed_map: UnorderedMap<AccountId, u8>,
+    sale_owner: AccountId,
 }
 
 #[ext_contract(ext_self)]
@@ -81,6 +83,7 @@ pub trait ExtTokenSale {
 impl Default for TokenSale {
     fn default() -> Self {
         Self {
+            owner_id: "default_owner_id".to_string(),
             ft_contract_name: "thisisjustasampletoken".to_string(),
             num_of_tokens: TOTAL_NUMBER_OF_TOKENS_FOR_SALE,
             deposit_map: UnorderedMap::new(b"a".to_vec()),
@@ -93,6 +96,7 @@ impl Default for TokenSale {
             grace_duration: GRACE_DURATION,
             is_finished: false,
             redeemed_map: UnorderedMap::new(b"c".to_vec()),
+            sale_owner: "default_sale_owner".to_string(),
         }
     }
 }
@@ -102,11 +106,13 @@ impl TokenSale {
 
     #[init]
     pub fn new(
+        owner_id: AccountId,
         ft_contract_name: AccountId,
         num_of_tokens: WrappedBalance,
         start_time_iso8601: String,
         sale_duration_in_min: WrappedDuration,
         grace_duration_in_min: WrappedDuration,
+        sale_owner: AccountId,
     ) -> Self {
         assert!(
             !env::state_exists(),
@@ -118,6 +124,7 @@ impl TokenSale {
         );
 
         let mut s = Self {
+            owner_id: owner_id,
             ft_contract_name: ft_contract_name,
             num_of_tokens: num_of_tokens.into(),
             deposit_map: UnorderedMap::new(b"ax".to_vec()),
@@ -130,7 +137,7 @@ impl TokenSale {
             grace_duration: grace_duration_in_min.into(),
             is_finished: false,
             redeemed_map: UnorderedMap::new(b"cx".to_vec()),
-            
+            sale_owner: sale_owner,
         };
         s.sale_duration *=  60 * 1_000_000_000;
         s.grace_duration *=  60 * 1_000_000_000;
@@ -150,7 +157,7 @@ impl TokenSale {
     ) {
         assert!(env::state_exists(), "The contract is not initialized");
         assert!(
-            env::current_account_id() == env::signer_account_id(), 
+            env::current_account_id() == self.owner_id, 
             "Function called not from the contract owner itself",
         );
 
