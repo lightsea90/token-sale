@@ -45,8 +45,6 @@ pub struct NumberOfTokens {
 #[serde(crate = "near_sdk::serde")]
 pub struct SaleInfo {
     ft_contract_name: AccountId,
-    decimals: u8,
-    symbol: String,
     num_of_tokens: Balance,
     start_time: Timestamp,
     sale_duration: Duration,
@@ -283,10 +281,6 @@ impl TokenSale {
             start_time: self.start_time,
             sale_duration: self.sale_duration,
             grace_duration: self.grace_duration,
-
-            // TODO: get it from FT metadata
-            decimals: 8,
-            symbol: String::from("AKUX"),
         }
     }
 
