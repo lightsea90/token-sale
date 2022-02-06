@@ -23,6 +23,9 @@ use near_sdk::json_types::{U128, WrappedBalance, WrappedDuration};
 
 use chrono::prelude::{Utc, DateTime};
 
+mod admin;
+mod view;
+
 near_sdk::setup_alloc!();
 
 // Sample parameters
@@ -45,8 +48,6 @@ pub struct NumberOfTokens {
 #[serde(crate = "near_sdk::serde")]
 pub struct SaleInfo {
     ft_contract_name: AccountId,
-    decimals: u8,
-    symbol: String,
     num_of_tokens: Balance,
     start_time: Timestamp,
     sale_duration: Duration,
@@ -64,6 +65,7 @@ pub struct UserSaleInfo {
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct TokenSale {
+    owner_id: AccountId,
     ft_contract_name: AccountId,
     num_of_tokens: Balance,
     deposit_map: UnorderedMap<AccountId, Balance>,
@@ -72,6 +74,8 @@ pub struct TokenSale {
     grace_duration: Duration,
     is_finished: bool,
     redeemed_map: UnorderedMap<AccountId, u8>,
+    sale_owner: AccountId,
+    fund_claimed: bool,
 }
 
 #[ext_contract(ext_self)]
@@ -83,6 +87,7 @@ pub trait ExtTokenSale {
 impl Default for TokenSale {
     fn default() -> Self {
         Self {
+            owner_id: "default_owner_id".to_string(),
             ft_contract_name: "thisisjustasampletoken".to_string(),
             num_of_tokens: TOTAL_NUMBER_OF_TOKENS_FOR_SALE,
             deposit_map: UnorderedMap::new(b"a".to_vec()),
@@ -95,84 +100,14 @@ impl Default for TokenSale {
             grace_duration: GRACE_DURATION,
             is_finished: false,
             redeemed_map: UnorderedMap::new(b"c".to_vec()),
+            sale_owner: "default_sale_owner".to_string(),
+            fund_claimed: false,
         }
     }
 }
 
 #[near_bindgen]
 impl TokenSale {
-
-    #[init]
-    pub fn new(
-        ft_contract_name: AccountId,
-        num_of_tokens: WrappedBalance,
-        start_time_iso8601: String,
-        sale_duration_in_min: WrappedDuration,
-        grace_duration_in_min: WrappedDuration,
-    ) -> Self {
-        assert!(
-            !env::state_exists(),
-            "The contract is already initialized",
-        );
-        assert!(
-            env::is_valid_account_id(&ft_contract_name.as_bytes()),
-            "FT contract name is invalid",
-        );
-
-        let mut s = Self {
-            ft_contract_name: ft_contract_name,
-            num_of_tokens: num_of_tokens.into(),
-            deposit_map: UnorderedMap::new(b"ax".to_vec()),
-            start_time: {
-                start_time_iso8601
-                .parse::<DateTime<Utc>>()
-                .unwrap().timestamp_nanos() as Timestamp
-            },
-            sale_duration: sale_duration_in_min.into(),
-            grace_duration: grace_duration_in_min.into(),
-            is_finished: false,
-            redeemed_map: UnorderedMap::new(b"cx".to_vec()),
-            
-        };
-        s.sale_duration *=  60 * 1_000_000_000;
-        s.grace_duration *=  60 * 1_000_000_000;
-        return s;
-    }
-
-    // reset the sale with new parameters
-    pub fn reset(
-        &mut self,
-        ft_contract_name: AccountId,
-        num_of_tokens: WrappedBalance,
-        start_time_iso8601: String,
-        sale_duration_in_min: WrappedDuration,
-        grace_duration_in_min: WrappedDuration,
-        reset_deposit: bool,
-        reset_redeem: bool,
-    ) {
-        assert!(env::state_exists(), "The contract is not initialized");
-        assert!(
-            env::current_account_id() == env::signer_account_id(), 
-            "Function called not from the contract owner itself",
-        );
-
-        self.ft_contract_name = ft_contract_name;
-        self.num_of_tokens = num_of_tokens.into();
-        self.start_time = {
-            start_time_iso8601
-            .parse::<DateTime<Utc>>()
-            .unwrap().timestamp_nanos() as Timestamp
-        };
-        self.sale_duration = {let d: Duration = sale_duration_in_min.into(); d * 60 * 1_000_000_000};
-        self.grace_duration = {let d: Duration = grace_duration_in_min.into(); d * 60 * 1_000_000_000};
-        self.is_finished = false;
-        if reset_deposit {
-            self.deposit_map.clear();
-        };
-        if reset_redeem {
-            self.redeemed_map.clear();
-        };
-    }
 
     // deposit to the sale
     #[payable]
@@ -258,71 +193,6 @@ impl TokenSale {
         }
     }
 
-    pub fn get_total_deposit(&self) -> NumberOfTokens {
-        assert!(env::state_exists(), "The contract is not initialized");
-
-        let deposit_list = self.deposit_map.values_as_vector();
-        let total_deposit: Balance;
-        if deposit_list.len() == 0 {
-            total_deposit = 0;
-        } else {
-            total_deposit = deposit_list.iter().sum();
-        }
-        return NumberOfTokens {
-            amount: total_deposit,
-            formatted_amount: (total_deposit as f64) / (BALANCE_BASE_UNIT as f64),
-        }
-    }
-
-    // get static info of the sale
-    pub fn get_sale_info(&self) -> SaleInfo {
-        // env::log(format!("{}", env::current_account_id()).as_bytes());
-        return SaleInfo {
-            ft_contract_name: self.ft_contract_name.clone(),
-            num_of_tokens: self.num_of_tokens,
-            start_time: self.start_time,
-            sale_duration: self.sale_duration,
-            grace_duration: self.grace_duration,
-
-            // TODO: get it from FT metadata
-            decimals: 8,
-            symbol: String::from("AKUX"),
-        }
-    }
-
-    // check sale status and trigger finish if need
-    pub fn check_sale_status(&self) -> String {
-        let current_ts = env::block_timestamp();
-        let current_sale_status: String = {
-            if current_ts < self.start_time {
-                String::from("NOT_STARTED")
-            } else if current_ts <= self.start_time + self.sale_duration {
-                String::from("ON_SALE")
-            } else if current_ts <= self.start_time + self.sale_duration + self.grace_duration {
-                String::from("ON_GRACE")
-            } else {
-                env::log(format!("period: FINISHED").as_bytes());
-                String::from("FINISHED")
-            }
-        };
-        return current_sale_status;
-    }
-
-    // Get the redeemable tokens in total
-    pub fn get_total_allocated_tokens(&self, account_id: AccountId) -> Balance {
-        let total_deposit = self.get_total_deposit().amount;
-        if total_deposit == 0 {
-            return 0;
-        }
-        // let current_price = (total_deposit as f64) / (self.num_of_tokens as f64);
-        // let account_id = account_id.unwrap_or(env::signer_account_id());
-        let total_redeemable_num = (
-            (self.deposit_map.get(&account_id).unwrap_or(0) as f64) 
-            * (self.num_of_tokens as f64) / (total_deposit as f64)
-        ) as Balance;
-        return total_redeemable_num;
-    }
-
     // Finish the sale. Only valid after grace period
     pub fn finish(&mut self, force: Option<bool>) {
         assert!(!self.is_finished, "The token sale has already been finished");
@@ -384,13 +254,6 @@ impl TokenSale {
         );
     }
 
-    pub fn get_user_sale(&self, account_id: AccountId) -> UserSaleInfo {
-        return UserSaleInfo {
-            deposit: WrappedBalance::from(self.deposit_map.get(&account_id).unwrap_or(0)),
-            is_redeemed: self.redeemed_map.get(&account_id).unwrap_or(0),
-            total_allocated_tokens: WrappedBalance::from(self.get_total_allocated_tokens(account_id)),
-        };
-    }
 
     // callback for redeem action
     pub fn on_redeem_finished(&mut self, predecessor_account_id: AccountId, amount_to_redeem: Balance) -> bool {
@@ -424,6 +287,22 @@ impl TokenSale {
             },
             _ => false
         }
+    }
+
+    #[payable]
+    pub fn claim_fund(&mut self) -> Promise {
+        assert_one_yocto();
+        assert!(
+            env::predecessor_account_id() == self.sale_owner.clone(),
+            "Only sale owner can claim the fund",
+        );
+        assert!(
+            !self.fund_claimed,
+            "Fund already claimed",
+        );
+        self.fund_claimed = true;
+        let fund = self.get_total_deposit().amount;
+        Promise::new(self.sale_owner.clone()).transfer(fund)
     }
 
 }
