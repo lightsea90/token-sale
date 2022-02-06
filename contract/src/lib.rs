@@ -75,6 +75,7 @@ pub struct TokenSale {
     is_finished: bool,
     redeemed_map: UnorderedMap<AccountId, u8>,
     sale_owner: AccountId,
+    fund_claimed: bool,
 }
 
 #[ext_contract(ext_self)]
@@ -100,6 +101,7 @@ impl Default for TokenSale {
             is_finished: false,
             redeemed_map: UnorderedMap::new(b"c".to_vec()),
             sale_owner: "default_sale_owner".to_string(),
+            fund_claimed: false,
         }
     }
 }
@@ -285,6 +287,22 @@ impl TokenSale {
             },
             _ => false
         }
+    }
+
+    #[payable]
+    pub fn claim_fund(&mut self) -> Promise {
+        assert_one_yocto();
+        assert!(
+            env::predecessor_account_id() == self.sale_owner.clone(),
+            "Only sale owner can claim the fund",
+        );
+        assert!(
+            !self.fund_claimed,
+            "Fund already claimed",
+        );
+        self.fund_claimed = true;
+        let fund = self.get_total_deposit().amount;
+        Promise::new(self.sale_owner.clone()).transfer(fund)
     }
 
 }

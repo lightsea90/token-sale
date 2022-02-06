@@ -36,6 +36,7 @@ impl TokenSale {
             is_finished: false,
             redeemed_map: UnorderedMap::new(b"cx".to_vec()),
             sale_owner: sale_owner,
+            fund_claimed: false,
         };
         s.sale_duration *=  60 * 1_000_000_000;
         s.grace_duration *=  60 * 1_000_000_000;
