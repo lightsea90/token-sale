@@ -225,8 +225,14 @@ impl TokenSale {
     #[payable]
     pub fn redeem(&mut self) -> Promise {
         assert_one_yocto();
-        let account_id = env::signer_account_id();
-        let amount_to_redeem = self.get_total_allocated_tokens(env::signer_account_id());
+        let current_ts = env::block_timestamp();
+        assert!(
+            current_ts >= self.start_time + self.sale_duration + self.grace_duration,
+            "Now is not time for redeem",
+        );
+
+        let account_id = env::predecessor_account_id();
+        let amount_to_redeem = self.get_total_allocated_tokens(account_id.clone());
         assert!(
             self.redeemed_map.get(&account_id).unwrap_or(0) == 0,
             "User has already redeemed",
@@ -300,6 +306,12 @@ impl TokenSale {
             !self.fund_claimed,
             "Fund already claimed",
         );
+        let current_ts = env::block_timestamp();
+        assert!(
+            current_ts >= self.start_time + self.sale_duration + self.grace_duration,
+            "Now is not time for redeem",
+        );
+        
         self.fund_claimed = true;
         let fund = self.get_total_deposit().amount;
         Promise::new(self.sale_owner.clone()).transfer(fund)
