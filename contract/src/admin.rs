@@ -56,7 +56,7 @@ impl TokenSale {
     ) {
         assert!(env::state_exists(), "The contract is not initialized");
         assert!(
-            env::current_account_id() == self.owner_id, 
+            env::predecessor_account_id() == self.owner_id, 
             "Function called not from the contract owner",
         );
 
