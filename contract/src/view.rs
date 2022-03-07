@@ -80,4 +80,11 @@ impl TokenSale {
             "total_deposit": self.get_total_deposit(),
         });
     }
+
+    pub fn get_owners(&self) -> Value {
+        return json!({
+            "owner_id": self.owner_id,
+            "sale_owner": self.sale_owner,
+        });
+    }
 }
