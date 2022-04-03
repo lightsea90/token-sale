@@ -55,10 +55,7 @@ impl TokenSale {
         reset_redeem: bool,
     ) {
         assert!(env::state_exists(), "The contract is not initialized");
-        assert!(
-            env::predecessor_account_id() == self.owner_id, 
-            "Function called not from the contract owner",
-        );
+        self.assert_owner_id();
 
         self.ft_contract_name = ft_contract_name;
         self.num_of_tokens = num_of_tokens.into();
@@ -76,6 +73,27 @@ impl TokenSale {
         if reset_redeem {
             self.redeemed_map.clear();
         };
+    }
+
+    pub fn change_owners(
+        &mut self,
+        owner_id: Option<AccountId>,
+        sale_owner: Option<AccountId>,
+    ) {
+        self.assert_owner_id();
+        if let Some(new_owner_id) = owner_id {
+            self.owner_id = new_owner_id;
+        }
+        if let Some(new_sale_owner) = sale_owner {
+            self.sale_owner = new_sale_owner;
+        }
+    }
+
+    fn assert_owner_id(&self) {
+        assert!(
+            env::predecessor_account_id() == self.owner_id, 
+            "Function called not from the contract owner",
+        );
     }
 
 }
