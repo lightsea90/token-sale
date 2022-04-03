@@ -224,7 +224,10 @@ impl TokenSale {
     // Redeem the tokens back to wallet
     #[payable]
     pub fn redeem(&mut self) -> Promise {
-        assert_one_yocto();
+        assert!(
+            env::attached_deposit() >= 1,
+            "Need at least 1 yoctoNEAR to execute",
+        );
         let current_ts = env::block_timestamp();
         assert!(
             current_ts >= self.start_time + self.sale_duration + self.grace_duration,
@@ -242,14 +245,38 @@ impl TokenSale {
             "The number of tokens to claim is invalid"
         );
 
-        let payout_promise = Promise::new(self.ft_contract_name.clone()).function_call(
-            b"ft_transfer".to_vec(), 
-            json!({
-                "receiver_id": account_id,
-                "amount": WrappedBalance::from(amount_to_redeem),
-            }).to_string().as_bytes().to_vec(), 
-            1, DEFAULT_GAS_TO_PAY,
-        );
+        let payout_promise: Promise;
+        if env::attached_deposit() > 1 {
+            payout_promise = Promise::new(self.ft_contract_name.clone())
+                .function_call(
+                    b"storage_deposit".to_vec(), 
+                    json!({
+                        "account_id": account_id,
+                    }).to_string().as_bytes().to_vec(), 
+                    env::attached_deposit(),
+                    DEFAULT_GAS_TO_PAY,
+                ).then(
+                    Promise::new(self.ft_contract_name.clone())
+                        .function_call(
+                            b"ft_transfer".to_vec(), 
+                            json!({
+                                "receiver_id": account_id,
+                                "amount": WrappedBalance::from(amount_to_redeem),
+                            }).to_string().as_bytes().to_vec(), 
+                            1, DEFAULT_GAS_TO_PAY,
+                        )
+                );
+        } else {
+            payout_promise = Promise::new(self.ft_contract_name.clone())
+                .function_call(
+                    b"ft_transfer".to_vec(), 
+                    json!({
+                        "receiver_id": account_id,
+                        "amount": WrappedBalance::from(amount_to_redeem),
+                    }).to_string().as_bytes().to_vec(), 
+                    1, DEFAULT_GAS_TO_PAY,
+                );
+        }
 
         return payout_promise.then(
             ext_self::on_redeem_finished(
@@ -309,7 +336,7 @@ impl TokenSale {
         let current_ts = env::block_timestamp();
         assert!(
             current_ts >= self.start_time + self.sale_duration + self.grace_duration,
-            "Now is not time for redeem",
+            "Now is not time to claim fund",
         );
         
         self.fund_claimed = true;
