@@ -20,16 +20,26 @@ impl TokenSale {
         }
     }
 
+    pub fn get_total_deposit_json(&self) -> Value {
+        let result = self.get_total_deposit();
+        return json!({
+            "amount": WrappedBalance::from(result.amount),
+            "formatted_amount": result.formatted_amount,
+        })
+    }
+
     // get static info of the sale
-    pub fn get_sale_info(&self) -> SaleInfo {
+    pub fn get_sale_info(&self) -> Value {
         // env::log(format!("{}", env::current_account_id()).as_bytes());
-        return SaleInfo {
-            ft_contract_name: self.ft_contract_name.clone(),
-            num_of_tokens: self.num_of_tokens,
-            start_time: self.start_time,
-            sale_duration: self.sale_duration,
-            grace_duration: self.grace_duration,
-        }
+        return json!({
+            "ft_contract_name": self.ft_contract_name.clone(),
+            "num_of_tokens": WrappedBalance::from(self.num_of_tokens),
+            "start_time": self.start_time,
+            "sale_duration": self.sale_duration,
+            "grace_duration": self.grace_duration,
+            "sale_owner": self.sale_owner,
+            "fund_claimed": self.fund_claimed,
+        })
     }
 
     // check sale status and trigger finish if need
@@ -59,7 +69,7 @@ impl TokenSale {
         // let current_price = (total_deposit as f64) / (self.num_of_tokens as f64);
         // let account_id = account_id.unwrap_or(env::signer_account_id());
         let total_redeemable_num = (
-            (self.deposit_map.get(&account_id).unwrap_or(0) as f64) 
+            (self.deposit_map.get(&account_id).unwrap_or(0) as f64)
             * (self.num_of_tokens as f64) / (total_deposit as f64)
         ) as Balance;
         return total_redeemable_num;
@@ -77,7 +87,7 @@ impl TokenSale {
     pub fn get_sale_stats(&self) -> Value {
         return json!({
             "num_of_users": self.deposit_map.keys_as_vector().len(),
-            "total_deposit": self.get_total_deposit(),
+            "total_deposit": WrappedBalance::from(self.get_total_deposit().amount),
         });
     }
 
