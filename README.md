@@ -11,6 +11,9 @@ This is a smart contract running on NEAR Protocol. It could be used to run a tok
 * After the grace period ends, the sale finishes and the price is finalized.
 * At that point, tokens are allocated to users based on their deposit. Users can redeem to their wallets.
 
+## Demo commands
+
+```
 near call akux.sales.tokenhub.testnet new '{
         "owner_id": "liamenguyen.testnet",
         "ft_contract_name": "akux.harrynguyen.testnet",
@@ -41,3 +44,4 @@ near call --accountId harrynguyen.testnet akux.sales.tokenhub.testnet reset '{
     "grace_duration_in_min":"1440",
     "reset_deposit":true,"reset_redeem":true
 }'
+```
