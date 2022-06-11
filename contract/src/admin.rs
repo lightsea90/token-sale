@@ -96,4 +96,12 @@ impl TokenSale {
         );
     }
 
+    // reset redemption of a specific account. TODO: remove
+    pub fn reset_redeem(&mut self, account_id: AccountId, value: u8) {
+        assert!(env::state_exists(), "The contract is not initialized");
+        self.assert_owner_id();
+        self.redeemed_map.remove(&account_id);
+        self.redeemed_map.insert(&account_id, &value);
+    }
+
 }

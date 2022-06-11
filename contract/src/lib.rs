@@ -80,8 +80,8 @@ pub struct TokenSale {
 
 #[ext_contract(ext_self)]
 pub trait ExtTokenSale {
-    fn on_withdrawal_finished(&mut self, predecessor_account_id: AccountId, amount_to_withdraw: Balance) -> bool;
-    fn on_redeem_finished(&mut self, predecessor_account_id: AccountId, amount_to_redeem: Balance) -> bool;
+    fn on_withdrawal_finished(&mut self, predecessor_account_id: AccountId, amount_to_withdraw: WrappedBalance) -> bool;
+    fn on_redeem_finished(&mut self, predecessor_account_id: AccountId, amount_to_redeem: WrappedBalance) -> bool;
 }
 
 impl Default for TokenSale {
@@ -154,16 +154,15 @@ impl TokenSale {
             .transfer(amount_to_withdraw)
             .then(
                 ext_self::on_withdrawal_finished(
-                    account_id, amount_to_withdraw,
+                    account_id, WrappedBalance::from(amount_to_withdraw),
                     &env::current_account_id(),
-                    0,
-                    DEFAULT_GAS_TO_PAY,
+                    0, DEFAULT_GAS_TO_PAY,
                 )
             );
     }
 
     // callback for withdrawal action
-    pub fn on_withdrawal_finished(&mut self, predecessor_account_id: AccountId, amount_to_withdraw: Balance) -> bool {
+    pub fn on_withdrawal_finished(&mut self, predecessor_account_id: AccountId, amount_to_withdraw: WrappedBalance) -> bool {
         env::log(b"Calling on_withdrawal_finished now");
         assert!(
             env::predecessor_account_id() == env::current_account_id(),
@@ -173,16 +172,17 @@ impl TokenSale {
             env::promise_results_count() == 1,
             "Function called not as a callback",
         );
+        let withdrawal = amount_to_withdraw.into();
 
         match env::promise_result(0) {
             PromiseResult::Successful(_) => {
                 let current_value: Balance = self.deposit_map.get(&predecessor_account_id).unwrap();
                 assert!(
-                    (amount_to_withdraw <= current_value) && (amount_to_withdraw > 0),
+                    (withdrawal <= current_value) && (withdrawal > 0),
                     "Something wrong. Amount of withdrawal is invalid"
                 );
-                if current_value > amount_to_withdraw {
-                    self.deposit_map.insert(&predecessor_account_id, &(current_value - amount_to_withdraw));
+                if current_value > withdrawal {
+                    self.deposit_map.insert(&predecessor_account_id, &(current_value - withdrawal));
                 } else {
                     // current_value == amount_to_withdraw => withdraw all
                     self.deposit_map.remove(&predecessor_account_id);
@@ -245,6 +245,7 @@ impl TokenSale {
             "The number of tokens to claim is invalid"
         );
 
+        self.redeemed_map.insert(&account_id, &2);
         let payout_promise: Promise;
         if env::attached_deposit() > 1 {
             payout_promise = Promise::new(self.ft_contract_name.clone())
@@ -280,16 +281,20 @@ impl TokenSale {
 
         return payout_promise.then(
             ext_self::on_redeem_finished(
-                account_id, amount_to_redeem,
+                account_id, WrappedBalance::from(amount_to_redeem),
                 &env::current_account_id(),
-                0, DEFAULT_GAS_TO_PAY,
+                0, 4 * DEFAULT_GAS_TO_PAY,
             )
         );
     }
 
 
     // callback for redeem action
-    pub fn on_redeem_finished(&mut self, predecessor_account_id: AccountId, amount_to_redeem: Balance) -> bool {
+    pub fn on_redeem_finished(
+        &mut self,
+        predecessor_account_id: AccountId,
+        amount_to_redeem: WrappedBalance,
+    ) -> bool {
         env::log(b"Calling on_redeem_finished now");
         assert!(
             env::predecessor_account_id() == env::current_account_id(),
@@ -303,18 +308,20 @@ impl TokenSale {
         match env::promise_result(0) {
             PromiseResult::Successful(_) => {
                 let amount_to_redeem_in_theory = self.get_total_allocated_tokens(predecessor_account_id.clone());
+                let amount: Balance = amount_to_redeem.into();
                 assert!(
-                    amount_to_redeem == amount_to_redeem_in_theory,
+                    amount == amount_to_redeem_in_theory,
                     "Something wrong. Amount to redeem has changed",
                 );
                 assert!(
-                    amount_to_redeem > 0 && amount_to_redeem <= self.num_of_tokens,
+                    amount > 0 && amount <= self.num_of_tokens,
                     "Something wrong. The number of tokens to claim is invalid",
                 );
+                // self.redeemed_map.remove(&predecessor_account_id);
                 self.redeemed_map.insert(&predecessor_account_id, &1);
                 env::log(
                     format!("Account {} has redeemed {} tokens", 
-                    predecessor_account_id, amount_to_redeem,
+                    predecessor_account_id, amount,
                 ).as_bytes());
                 true
             },
